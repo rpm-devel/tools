@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+VERNUM="7"
+VERNAME="el"
+DISTRO="RHEL"
+ARCH="x86_64"
+SRCDIR="$HOME/Documents/rpmbuild/$ARCH/$VERNAME$VERNUM"
+TARGETDIR="$HOME/Documents/sourceforge/$ARCH/$VERNAME$VERNUM"
+LOCUSER="localuser"
+SFUSER="sfuser"
+LOCSERV="ftp.casjay.in:/var/ftp/pub/Casjay/repo"
+SFWEB="web.sourceforge.net"
+SFFRS="frs.sourceforge.net"
+SFPROJ="rpm-devel"
+
+# Clean from previous builds
+echo "Cleaning Previous builds"
+rm -Rf "$TARGETDIR"/{srpms,rpms,debug}
+
+# Make Directories
+echo "Creating Directories"
+mkdir -p "$TARGETDIR"/{addons,extras,srpms,debug,rpms}
+
+# Sign Packages
+echo "Signing the Packages"
+rpm --addsign "$SRCDIR"/*/*.rpm "$SRCDIR"/*/*/*.rpm
+
+# Move RPS to appropriate Directories
+echo "Moving SRPMS"
+rsync -aqhP --delete "$SRCDIR"/srpm/*.rpm "$TARGETDIR"/srpms/
+
+echo "Moving Debug RPMS"
+rsync -aqhP "$SRCDIR"/rpms/*/*debugsource*.rpm "$TARGETDIR"/debug/
+rsync -aqhP "$SRCDIR"/rpms/*/*debuginfo*.rpm "$TARGETDIR"/debug/
+
+echo "Moving RPMS"
+rsync -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$SRCDIR"/rpms/*/*.rpm "$TARGETDIR"/rpms/
+
+# Create repos
+echo "Generating Addons REPO"
+cd "$TARGETDIR"/addons && createrepo -q -d ./
+
+echo "Generating Extras REPO"
+cd "$TARGETDIR"/extras && createrepo -q -d ./
+
+echo "Generating SRPMS REPO"
+cd "$TARGETDIR"/srpms && createrepo -q -d ./
+
+echo "Generating DEBUG REPO"
+cd "$TARGETDIR"/debug && createrepo -q -d ./
+
+echo "Generating RPMS REPO"
+cd "$TARGETDIR"/rpms && createrepo -q -d ./
+
+# Sync to locale FTP Server
+echo "Sending Locally"
+rsync -aqhP --chown=ftp:ftp --delete --exclude=addons,extras -e ssh "$TARGETDIR"/* $LOCUSER@$LOCSERV/$DISTRO/$ARCH/$VERNUM
+
+# Sync to website
+echo "Sending to website"
+rsync -aqhP --delete --exclude=addons,extras -e ssh "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
+rsync -aqhP --exclude=srpms,debug,rpms -e ssh "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
+
+# Sync to frs.sourceforge.net
+#echo "Sending to FRS site"
+rsync -aqhP --delete --exclude=addons,extras -e ssh "$TARGETDIR"/* $SFUSER@SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
+rsync -aqhP --exclude=srpms,debug,rpms -e ssh "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/SFPROJ/$DISTRO/$ARCH/$VERNUM
+
+echo "Completed"
