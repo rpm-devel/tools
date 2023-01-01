@@ -65,9 +65,9 @@ DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$SET_IMAGE$SET_VERSION"
 if docker ps -a 2>&1 | grep -q "$C_NAME"; then
   echo "A container already exist with the name $C_NAME"
   exit 1
+else
+  echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION"
 fi
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 docker run -d \
   --name $C_NAME \
@@ -77,7 +77,7 @@ docker run -d \
   -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
   -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \
   -v "$H_PKG_ROOT:$C_PKG_ROOT:z" \
-  $SET_IMAGE:$SET_VERSION init &>/dev/null || __error
+  $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
 sleep 10
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute yum install epel-release git curl wget sudo -yy -q
