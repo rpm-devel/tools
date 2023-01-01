@@ -50,9 +50,12 @@ __error() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute() {
+  echo "Executing $*" && sleep 1
   docker exec -it $C_NAME "$@"
   return $?
 }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+echo "Setting up the container $C_NAME with $SET_IMAGE:$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 docker run -d \
   --name $C_NAME \
