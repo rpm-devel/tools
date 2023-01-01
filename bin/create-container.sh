@@ -34,7 +34,7 @@ SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 SET_IMAGE="$1"
 SET_VERSION="$2"
 C_HOME_DIR="/home/build"
-C_NAME="build-$SET_VERSION"
+C_NAME="build$SET_VERSION"
 C_HOSTNAME="$C_NAME.casjaysdev.com"
 C_BUILD_ROOT="$C_HOME_DIR/rpmbuild"
 H_BUILD_ROOT="$HOME/Projects/github/rpm-devel"
@@ -68,7 +68,7 @@ docker run -d \
   $SET_IMAGE:$SET_VERSION init || __error
 sleep 10
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute yum install git curl wget sudo -yy || __error "Failed to install packages"
+__docker_execute yum install epel-release git curl wget sudo -yy || __error "Failed to install packages"
 __docker_execute git clone "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
 __docker_execute /usr/local/share/CasjaysDev/scripts/install.sh /usr/local/share/CasjaysDev/scripts/install.sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
