@@ -31,8 +31,19 @@ SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 # Initial debugging
 [ "$1" = "--debug" ] && set -x && export SCRIPT_OPTS="--debug" && export _DEBUG="on"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__error() {
+  echo "${1:-Something went wrong}"
+  exit 1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__docker_execute() {
+  echo "Executing $*" && sleep 1
+  docker exec -it $C_NAME "$@"
+  return $?
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SET_IMAGE="$1"
-SET_VERSION="$2"
+SET_VERSION="${2:-latest}"
 C_HOME_DIR="/home/build"
 C_NAME="build$SET_VERSION"
 C_HOSTNAME="$C_NAME.casjaysdev.com"
@@ -44,16 +55,7 @@ C_PKG_ROOT="$C_HOME_DIR/Documents/sourceforge"
 H_PKG_ROOT="$HOME/Documents/builds/sourceforge"
 DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$SET_IMAGE$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__error() {
-  echo "${1:-Something went wrong}"
-  exit 1
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute() {
-  echo "Executing $*" && sleep 1
-  docker exec -it $C_NAME "$@"
-  return $?
-}
+[ -n "$SET_IMAGE" ] || { echo "Usage: $APPNAME [imageName] [version]" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Setting up the container $C_NAME with $SET_IMAGE:$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
