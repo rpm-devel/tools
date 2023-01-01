@@ -65,7 +65,7 @@ docker run -d \
   -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
   -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \
   -v "$H_PKG_ROOT:$C_PKG_ROOT:z" \
-  $SET_IMAGE:$SET_VERSION init || __error
+  $SET_IMAGE:$SET_VERSION init &>/dev/null || __error
 sleep 10
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute yum install epel-release git curl wget sudo -yy || __error "Failed to install packages"
