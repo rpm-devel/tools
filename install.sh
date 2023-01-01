@@ -22,6 +22,7 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Setting up rpm development scripts"
 git clone -q "https://github.com/rpm-devel/tools" "/tmp/rpm-dev-tools" || { echo "Failed to clone the repo" && exit 1; }
+[ -d "/tmp/rpm-dev-tools/bin" ] && chmod -Rf 755 "/tmp/rpm-dev-tools/bin" || { echo "Failed to clone the repo" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -d "$HOME/.local/bin" ]; then
   echo "Setting bin dir to ~/.local/bin"
