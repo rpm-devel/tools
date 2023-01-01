@@ -80,13 +80,12 @@ docker run -d \
   $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
 sleep 10
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute yum install epel-release git curl wget sudo -yy -q
-__docker_execute git clone -q "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
-__docker_execute /usr/local/share/CasjaysDev/scripts/install.sh /usr/local/share/CasjaysDev/scripts/install.sh
+__docker_execute yum install epel-release git curl wget sudo -yy -q &>/dev/null
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute git clone -q "https://github.com/rpm-devel/tools" "/tmp/tools"
-__docker_execute cp -Rf "/tmp/tools/bin/." "$C_HOME_DIR/.local/bin/"
-__docker_execute cp -Rf "/tmp/tools/.rpmmacros" "$C_HOME_DIR/$rpmmacros"
+__docker_execute git clone -q "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts" &>/dev/null
+__docker_execute /usr/local/share/CasjaysDev/scripts/install.sh &>/dev/null
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__docker_execute bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")" &>/dev/null
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute bash -c "$(curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
