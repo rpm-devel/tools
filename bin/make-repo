@@ -22,100 +22,97 @@ SRC_DIR="${BASH_SOURCE%/*}"
 # Set bash options
 if [[ "$1" == "--debug" ]]; then shift 1 && set -xo pipefail && export SCRIPT_OPTS="--debug" && export _DEBUG="on"; fi
 trap 'exitCode=${exitCode:-$?};[ -n "$MAKE_REPO_TEMP_FILE" ] && [ -f "$MAKE_REPO_TEMP_FILE" ] && rm -Rf "$MAKE_REPO_TEMP_FILE" &>/dev/null' EXIT
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 VERNAME="el"
 DISTRO="RHEL"
 ARCH="$(uname -m)"
 VERNUM="$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")"
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Local FTP server address
 FTPDOM="ftp.casjaysdev.com"
 FTPDIR="/var/ftp/pub/Casjay/repo"
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sourceforge Web urls
 SFWEB="web.sourceforge.net"
 SFFRS="frs.sourceforge.net"
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Developnment project name
 SFPROJ="rpm-devel"
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Usernames
-SFUSER="sfuser"
-LOCUSER="localuser"
-
+SFUSER="$SFUSER"
+LOCUSER="${LOCUSER:-root}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
 SRCDIR="$HOME/Documents/rpmbuild/$ARCH/$VERNAME$VERNUM"
 TARGETDIR="$HOME/Documents/sourceforge/$ARCH/$VERNAME$VERNUM"
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean from previous builds
 echo "Cleaning Previous builds"
 rm -Rf "$TARGETDIR"/{srpms,rpms,debug}
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Make Directories
 echo "Creating Directories"
 mkdir -p "$TARGETDIR"/{addons,extras,srpms,debug,rpms}
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
 rpm --addsign "$SRCDIR"/*/*.rpm "$SRCDIR"/*/*/*.rpm
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
 echo "Moving SRPMS"
-rsync -aqhP --delete "$SRCDIR"/srpm/*.rpm "$TARGETDIR"/srpms/
+rsync -aqhP --delete "$SRCDIR"/srpm/*.rpm "$TARGETDIR/srpms/"
 
 echo "Moving Debug RPMS"
-rsync -aqhP "$SRCDIR"/rpms/*/*debugsource*.rpm "$TARGETDIR"/debug/
-rsync -aqhP "$SRCDIR"/rpms/*/*debuginfo*.rpm "$TARGETDIR"/debug/
+rsync -aqhP "$SRCDIR"/rpms/*/*debugsource*.rpm "$TARGETDIR/debug/"
+rsync -aqhP "$SRCDIR"/rpms/*/*debuginfo*.rpm "$TARGETDIR/debug/"
 
 echo "Moving RPMS"
-rsync -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$SRCDIR"/rpms/*/*.rpm "$TARGETDIR"/rpms/
-
+rsync -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$SRCDIR"/rpms/*/*.rpm "$TARGETDIR/rpms/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create repos
 echo "Generating Addons REPO"
-cd "$TARGETDIR"/addons && createrepo -q -d ./
+cd "$TARGETDIR/addons" && createrepo -q -d ./
 
 echo "Generating Extras REPO"
-cd "$TARGETDIR"/extras && createrepo -q -d ./
+cd "$TARGETDIR/extras" && createrepo -q -d ./
 
 echo "Generating SRPMS REPO"
-cd "$TARGETDIR"/srpms && createrepo -q -d ./
+cd "$TARGETDIR/srpms" && createrepo -q -d ./
 
 echo "Generating DEBUG REPO"
-cd "$TARGETDIR"/debug && createrepo -q -d ./
+cd "$TARGETDIR/debug" && createrepo -q -d ./
 
 echo "Generating RPMS REPO"
-cd "$TARGETDIR"/rpms && createrepo -q -d ./
+cd "$TARGETDIR/rpms" && createrepo -q -d ./
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to locale FTP Server
-curl -q -LSsf -I "ftp://$FTPDOM" &>"/tmp/$FTPDOM.tmp"
-if [[ ! -s "/tmp/$FTPDOM.tmp" ]]; then
-  echo "$LOCUSER Sending Locally: $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM"
+if curl -q -LSsf -I "ftp://$FTPDOM" && [ -n "$LOCUSER" ]; then
+  echo "Sending Locally: $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM"
   rsync -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
 fi
-[[ -f "/tmp/$FTPDOM.tmp" ]] && rm -R "/tmp/$FTPDOM.tmp"
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
-echo "$SFUSER is Sending to website: /home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM"
-rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
-rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
-
+if [ -z "$SFUSER" ]; then
+  echo "The variables SFUSER need to be set to your sourceforge user"
+else
+  echo "$SFUSER is Sending to website: /home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM"
+  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
+  rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
-echo "$SFUSER is Sending to FRS site: /home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM"
-rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
-rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
-
-echo "Completed"
+if [ -z "$SFUSER" ]; then
+  echo "The variables SFUSER need to be set to your sourceforge user"
+else
+  echo "$SFUSER is Sending to FRS site: /home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM"
+  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
+  rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+echo "The script has completed"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+exit
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# end

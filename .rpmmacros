@@ -1,40 +1,42 @@
 global debug_package  %{nil}
 
-%osver                el7
+%distroname           casjay
+%packager             CasjaysDev
+%_gpg_name            Jason Hempstead
+%vendor               %packager http://rpms.casjaysdev.com
+
 %_minorver            3
-%_pdistro             casjay
+%BuildArch            %{_arch}
+%osver                el%{?rhel}
+%_pdistro             %distroname
+
+%dist                 %_minorver.%_pdistro.%osver
+%distribution         %_minorver.%_pdistro.%osver
 
 %_topdir              %{getenv:HOME}/rpmbuild
 %_sourcedir           %{getenv:HOME}/rpmbuild/%{name}
 %_specdir             %{getenv:HOME}/rpmbuild/%{name}
+%_builddir            %{getenv:HOME}/.local/tmp/BUILD
+%_buildrootdir        %{getenv:HOME}/.local/tmp/BUILDROOT
+%_buildroot           %{_buildrootdir}/%{name}-%{version}-%{release}.%{BuildArch}
 
-%_rpmdir              %{getenv:HOME}/Documents/rpmbuild/x86_64/%osver/rpms
-%_srcrpmdir           %{getenv:HOME}/Documents/rpmbuild/x86_64/%osver/srpm
-%_debugrpmdir         %{getenv:HOME}/Documents/rpmbuild/x86_64/%osver/debug
-%_builddir            /var/tmp/BUILD
-%_buildrootdir        /var/tmp/BUILDROOT
-%_buildroot           /var/tmp/BUILDROOT/%{name}-%{version}-%{release}.%{_arch}
+%_rpmdir              %{getenv:HOME}/Documents/rpmbuild/%BuildArch/%osver/rpms
+%_srcrpmdir           %{getenv:HOME}/Documents/rpmbuild/%BuildArch/%osver/srpm
+%_debugrpmdir         %{getenv:HOME}/Documents/rpmbuild/%BuildArch/%osver/debug
 
-%_gpg_path            %(echo $HOME)/.gnupg
 %_signature           gpg
-%_gpg_name            Jason Hempstead
+%_gpg_path            %(echo $HOME)/.gnupg
 %_gpgbin              /usr/bin/gpg
-%packager             CasjaysDev
-%vendor               CasjaysDev http://rpms.casjaysdev.com
-%distribution         %_minorver.%_pdistro.%osver
-%dist                 %_minorver.%_pdistro.%osver
-%BuildArch            x86_64
 %_var                 /var
 %_tmppath             /tmp
 %_usr                 /usr
 %_usrdir              /usr
 %_usrsrc              /usr/src
-%_lib                 lib64
 %_docdir              /usr/share/doc
 %_sysconfdir          /etc
 %_prefix              /usr
 %_bindir              /usr/bin
-%_libdir              /usr/lib64
+%_libdir              /usr/%_lib
 %_libexecdir          /usr/libexec
 %_sbindir             /usr/sbin
 %_sharedstatedir      /var/lib
@@ -49,7 +51,6 @@ global debug_package  %{nil}
 %ext_man              .gz
 %_smp_mflags          -j2
 
-%__arch_install_post \
-    [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
+%__arch_install_post [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
     case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
     /usr/lib/rpm/check-buildroot
