@@ -74,7 +74,7 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "$CONTAINER_EXiSTS" = "true" ]; then
   echo "A container already exist with the name $C_NAME"
-  [ "$FORCE_INST" = "true " ] || exit 1
+  [ "$FORCE_INST" = "true" ] || exit 1
 else
   echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION"
 fi
