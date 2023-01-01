@@ -30,7 +30,7 @@ SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Initial debugging
 [ "$1" = "--debug" ] && set -x && export SCRIPT_OPTS="--debug" && export _DEBUG="on"
-[ "$1" = "--force" ] && FORCE_INST="true"
+[ "$1" = "--force" ] && FORCE_INST="true" && shift 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __error() {
   echo "${1:-Something went wrong}"
