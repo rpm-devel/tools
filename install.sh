@@ -24,14 +24,20 @@ echo "Setting up rpm development scripts"
 git clone -q "https://github.com/rpm-devel/tools" "/tmp/rpm-dev-tools" || { echo "Failed to clone the repo" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -d "$HOME/.local/bin" ]; then
+  echo "Setting bin dir to ~/.local/bin"
   U_BIN="$HOME/.local/bin"
-  cp -R "/tmp/rpm-dev-tools/bin/." "$HOME/.local/bin"
+  cp -R "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
+elif [ -d "$HOME/.bin" ]; then
+  echo "Setting bin dir to ~/.bin"
+  U_BIN="$HOME/.bin"
+  cp -R "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 elif [ -d "$HOME/bin" ]; then
+  echo "Setting bin dir to ~/bin"
   U_BIN="$HOME/bin"
-  cp -R "/tmp/rpm-dev-tools/bin/." "$HOME/bin"
+  cp -R "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[ -f "/tmp/rpm-dev-tools" ] && cp -Rf "/tmp/rpm-dev-tools/.rpmmacros" "$HOME/.rpmmacros"
+cp -Rf "/tmp/rpm-dev-tools/.rpmmacros" "$HOME/.rpmmacros"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -f "$HOME/.rpmmacros" ] && [ -f "$U_BIN/create-container.sh" ]; then
   echo "Setup has completed successfully"
