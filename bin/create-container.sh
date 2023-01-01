@@ -67,22 +67,30 @@ DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$SET_IMAGE$SET_VERSION"
 [ -n "$SET_IMAGE" ] || { echo "Usage: $APPNAME [imageName] [version]" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if docker ps -a 2>&1 | grep -q "$C_NAME"; then
+  CONTAINER_EXiSTS="true"
+else
+  CONTAINER_EXiSTS="false"
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if [ "$CONTAINER_EXiSTS" = "true" ]; then
   echo "A container already exist with the name $C_NAME"
-  exit 1
+  [ "$FORCE_INST" = "true " ] || exit 1
 else
   echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-docker run -d \
-  --name $C_NAME \
-  --hostname $C_HOSTNAME \
-  -e TZ=America/New_York \
-  -v "$DOCKER_HOME_DIR:$C_HOME_DIR" \
-  -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
-  -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \
-  -v "$H_PKG_ROOT:$C_PKG_ROOT:z" \
-  $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
-sleep 10
+if [ "$CONTAINER_EXiSTS" != "true" ]; then
+  docker run -d \
+    --name $C_NAME \
+    --hostname $C_HOSTNAME \
+    -e TZ=America/New_York \
+    -v "$DOCKER_HOME_DIR:$C_HOME_DIR" \
+    -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
+    -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \
+    -v "$H_PKG_ROOT:$C_PKG_ROOT:z" \
+    $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
+  sleep 10
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute yum install epel-release git curl wget sudo -yy -q &>/dev/null
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
