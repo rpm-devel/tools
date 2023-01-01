@@ -38,7 +38,7 @@ __error() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute() {
   local ARGS="$*"
-  echo "Executing $ARGS" && sleep 1
+  echo "Executing: $ARGS" && sleep 1
   docker exec -it $C_NAME "$@"
   if [ $? -eq 0 ]; then
     return 0
