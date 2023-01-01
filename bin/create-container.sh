@@ -38,9 +38,10 @@ __error() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute() {
+  [ "$1" = "-q" ] && shift 1 && __tee() { tee; } || __tee() { tee &>/dev/null; }
   local ARGS="$*"
   echo "Executing: $ARGS" && sleep 1
-  docker exec -it $C_NAME "$@"
+  docker exec -it $C_NAME "$@" |& __tee
   if [ $? -eq 0 ]; then
     return 0
   elif [ "$FORCE_INST" = "true" ]; then
@@ -93,12 +94,12 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
   sleep 10
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute yum install epel-release git curl wget sudo -yy -qq
+__docker_execute -q yum install epel-release git curl wget sudo -yy -q
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute git clone -q "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
-__docker_execute /usr/local/share/CasjaysDev/scripts/install.sh
+__docker_execute -q git clone "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
+__docker_execute -q /usr/local/share/CasjaysDev/scripts/install.sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
+__docker_execute -q bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute bash -c "$(curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
