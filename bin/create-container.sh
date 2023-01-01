@@ -57,7 +57,12 @@ DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$SET_IMAGE$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 [ -n "$SET_IMAGE" ] || { echo "Usage: $APPNAME [imageName] [version]" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-echo "Setting up the container $C_NAME with $SET_IMAGE:$SET_VERSION"
+if docker ps -a 2>&1 | grep -q "$C_NAME"; then
+  echo "A container already exist with $C_NAME"
+  exit 1
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 docker run -d \
   --name $C_NAME \
@@ -70,11 +75,11 @@ docker run -d \
   $SET_IMAGE:$SET_VERSION init &>/dev/null || __error
 sleep 10
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute yum install epel-release git curl wget sudo -yy || __error "Failed to install packages"
-__docker_execute git clone "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
+__docker_execute yum install epel-release git curl wget sudo -yy -q || __error "Failed to install packages"
+__docker_execute git clone -q "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
 __docker_execute /usr/local/share/CasjaysDev/scripts/install.sh /usr/local/share/CasjaysDev/scripts/install.sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute git clone "https://github.com/rpm-devel/tools" "/tmp/tools"
+__docker_execute git clone -q "https://github.com/rpm-devel/tools" "/tmp/tools"
 __docker_execute cp -Rf "/tmp/tools/bin/." "$C_HOME_DIR/.local/bin/"
 __docker_execute cp -Rf "/tmp/tools/.rpmmacros" "$C_HOME_DIR/$rpmmacros"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
