@@ -37,15 +37,20 @@ __error() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute() {
-  echo "Executing $*" && sleep 1
+  local ARGS="$*"
+  echo "Executing $ARGS" && sleep 1
   docker exec -it $C_NAME "$@"
-  return $?
+  if [ $? -eq 0 ]; then
+    return 0
+  else
+    __error "Failed to execute $ARGS"
+  fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SET_IMAGE="$1"
 SET_VERSION="${2:-latest}"
 C_HOME_DIR="/home/build"
-C_NAME="build$SET_VERSION"
+C_NAME="rpm-build$SET_VERSION"
 C_HOSTNAME="$C_NAME.casjaysdev.com"
 C_BUILD_ROOT="$C_HOME_DIR/rpmbuild"
 H_BUILD_ROOT="$HOME/Projects/github/rpm-devel"
@@ -58,7 +63,7 @@ DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$SET_IMAGE$SET_VERSION"
 [ -n "$SET_IMAGE" ] || { echo "Usage: $APPNAME [imageName] [version]" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if docker ps -a 2>&1 | grep -q "$C_NAME"; then
-  echo "A container already exist with $C_NAME"
+  echo "A container already exist with the name $C_NAME"
   exit 1
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -75,7 +80,7 @@ docker run -d \
   $SET_IMAGE:$SET_VERSION init &>/dev/null || __error
 sleep 10
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute yum install epel-release git curl wget sudo -yy -q || __error "Failed to install packages"
+__docker_execute yum install epel-release git curl wget sudo -yy -q
 __docker_execute git clone -q "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
 __docker_execute /usr/local/share/CasjaysDev/scripts/install.sh /usr/local/share/CasjaysDev/scripts/install.sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
