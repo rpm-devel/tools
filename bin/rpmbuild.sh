@@ -17,6 +17,7 @@ echo >"$HOME/Documents/rpmbuild/errors.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
 for i in $(cat $HOME/Documents/rpmbuild/build.txt); do
+    [ -f "$(builtin type -P yum-builddep)" ] && yum-builddep -yy --skip-broken "$i"
     rpmbuild -ba "$i" && echo "$i exit code $?" >>"$HOME/Documents/rpmbuild/status.txt" 2>>"$HOME/Documents/rpmbuild/errors.txt"
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
