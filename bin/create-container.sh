@@ -29,7 +29,7 @@ SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 #if [ ! -t 0 ] && { [ "$1" = --term ] || [ $# = 0 ]; }; then { [ "$1" = --term ] && shift 1 || true; } && TERMINAL_APP="TRUE" myterminal -e "$APPNAME $*" && exit || exit 1; fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Initial debugging
-[ "$1" = "--debug" ] && set -x && export SCRIPT_OPTS="--debug" && export _DEBUG="on"
+[ "$1" = "--debug" ] && set -x && export SCRIPT_OPTS="--debug" && export _DEBUG="on" && shift 1
 [ "$1" = "--force" ] && FORCE_INST="true" && shift 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __error() {
@@ -93,12 +93,12 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
   sleep 10
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute yum install epel-release git curl wget sudo -yy -q &>/dev/null
+__docker_execute yum install epel-release git curl wget sudo -yy -qq
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute git clone -q "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts" &>/dev/null
-__docker_execute /usr/local/share/CasjaysDev/scripts/install.sh &>/dev/null
+__docker_execute git clone -q "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
+__docker_execute /usr/local/share/CasjaysDev/scripts/install.sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")" &>/dev/null
+__docker_execute bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute bash -c "$(curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
