@@ -30,6 +30,7 @@ SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Initial debugging
 [ "$1" = "--debug" ] && set -x && export SCRIPT_OPTS="--debug" && export _DEBUG="on"
+[ "$1" = "--force" ] && FORCE_INST="true"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __error() {
   echo "${1:-Something went wrong}"
@@ -42,6 +43,9 @@ __docker_execute() {
   docker exec -it $C_NAME "$@"
   if [ $? -eq 0 ]; then
     return 0
+  elif [ "$FORCE_INST" = "true" ]; then
+    echo "Failed to execute $ARGS"
+    return 1
   else
     __error "Failed to execute $ARGS"
   fi
