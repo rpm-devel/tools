@@ -38,11 +38,17 @@ __error() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute() {
-  [ "$1" = "-q" ] && shift 1 && __tee() { tee; } || __tee() { tee &>/dev/null; }
+  [ "$1" = "-q" ] && SILENT="true" && shift 1
   local ARGS="$*"
   echo "Executing: $ARGS" && sleep 1
-  docker exec -it $C_NAME "$@" |& __tee
-  if [ $? -eq 0 ]; then
+  if [ "$SILENT" = "true" ]; then
+    docker exec -it $C_NAME "$@" &>/dev/null
+    exitCode=$?
+  else
+    docker exec -it $C_NAME "$@"
+    exitCode=$?
+  fi
+  if [ $exitCode -eq 0 ]; then
     return 0
   elif [ "$FORCE_INST" = "true" ]; then
     echo "Failed to execute $ARGS"
