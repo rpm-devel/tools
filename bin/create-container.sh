@@ -60,7 +60,7 @@ __docker_execute() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SET_IMAGE="$1"
 SET_VERSION="${2:-latest}"
-C_HOME_DIR="/home/build"
+C_HOME_DIR="/root"
 C_NAME="rpm-build$SET_VERSION"
 C_HOSTNAME="$C_NAME.casjaysdev.com"
 C_BUILD_ROOT="$C_HOME_DIR/rpmbuild"
