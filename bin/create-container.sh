@@ -66,6 +66,7 @@ __docker_execute() {
 SET_IMAGE="$1"
 SET_VERSION="${2:-latest}"
 C_HOME_DIR="/root"
+H_HOME_DIR="$HOME"
 C_NAME="rpmdev$SET_VERSION"
 C_HOSTNAME="$C_NAME.casjaysdev.com"
 C_BUILD_ROOT="$C_HOME_DIR/rpmbuild"
@@ -97,12 +98,12 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
     --name $C_NAME \
     --hostname $C_HOSTNAME \
     -e TZ=America/New_York \
-    -v "$HOME/.gnupg:$C_HOME_DIR/.gnupg:z" \
-    -v "$HOME/.ssh:$C_HOME_DIR/.ssh:z" \
-    -v "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
-    -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
     -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \
     -v "$H_PKG_ROOT:$C_PKG_ROOT:z" \
+    -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
+    -v "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
+    -v "$H_HOME_DIR/.ssh:$C_HOME_DIR/.ssh:z" \
+    -v "$H_HOME_DIR/.gnupg:$C_HOME_DIR/.gnupg:z" \
     $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
   sleep 10
 fi
