@@ -105,7 +105,7 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
     -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
     -v "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
     -v "$H_HOME_DIR/.ssh:$C_HOME_DIR/.ssh:z" \
-    -v "$H_HOME_DIR/.gnupg:$C_HOME_DIR/.gnupg:z" \
+    -v "$H_HOME_DIR/.local/dotfiles/personal:$C_HOME_DIR/.local/dotfiles/personal:z" \
     $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
   sleep 10
 fi
