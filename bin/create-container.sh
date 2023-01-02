@@ -102,8 +102,10 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute -q yum install epel-release git curl wget sudo -yy -q
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute -q git clone "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
-__docker_execute -q /usr/local/share/CasjaysDev/scripts/install.sh
+if [ ! -d "/usr/local/share/CasjaysDev/scripts" ]; then
+  __docker_execute -q git clone "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
+  __docker_execute -q /usr/local/share/CasjaysDev/scripts/install.sh
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute -q bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
