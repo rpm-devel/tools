@@ -29,24 +29,31 @@ echo >"$LOG_DIR/build.txt"
 echo >"$LOG_DIR/status.txt"
 echo >"$LOG_DIR/errors.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
+find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
 for i in $(cat "$LOG_DIR/specs.txt"); do
     spec_name="$(basename "${i//.spec/}")"
+    mkdir -p "$LOG_DIR/$spec_name"
     if [ -f "$(builtin type -P yum-builddep)" ]; then
         echo "Installing dependencies for $spec_name"
         yum-builddep -yy -qq --skip-broken "$i" &>/dev/null
     fi
     if [ -f "$(builtin type -P rpmbuild)" ]; then
         echo "Building $spec_name package"
-        rpmbuild -ba "$i" >>"$LOG_DIR/build.txt" 2>"$LOG_DIR/errors.$spec_name.txt"
+        rpmbuild -ba "$i" 2>"$LOG_DIR/$spec_name/errors.txt" >"$LOG_DIR/$spec_name/build.txt"
         statusCode="$?"
-        echo "$i exit code $statusCode" >>"$LOG_DIR/status.txt"
-        [ $statusCode -eq 0 ] && echo "Done building $spec_name" || echo "Failed to build $spec_name - See $LOG_DIR/errors.$spec_name.txt for details"
+        echo "$i exit code $statusCode" >>"$LOG_DIR/$spec_name/status.txt"
+        if [ $statusCode -eq 0 ]; then
+            echo "Done building $spec_name"
+        else
+            echo "Failed to build $i"
+            echo "See $LOG_DIR/$spec_name/errors.txt for details"
+        fi
+        echo "# - - - - - - - - - - - - - - - - -"
     fi
 done
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
-find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign rpm packages
 find "$SRCDIR/" -iname "*.rpm" >"$LOG_DIR/pkgs.txt"
