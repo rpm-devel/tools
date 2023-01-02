@@ -1,33 +1,46 @@
 #!/usr/bin/env bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+VERNAME="el"
+DISTRO="RHEL"
+ARCH="$(uname -m)"
+VERNUM="$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+SPEC_DIR="$HOME/rpmbuild"
+LOG_DIR="$HOME/Documents/builds"
+BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
+BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
+SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$ARCH/$VERNAME$VERNUM"
+TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$ARCH/$VERNAME$VERNUM"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean previous build
-rm -Rf "$HOME/.local/tmp/BUILDROOT/BUILD"
-rm -Rf "$HOME/.local/tmp/BUILDROOT/BUILDROOT"
-for dir in rpmbuild sourceforge; do
-    rm -Rf "$HOME/Documents/$dir/$ARCH/$VERNAME$VERNUM"
-    mkdir -p "$HOME/Documents/$dir/$ARCH/$VERNAME$VERNUM"
+for dir in "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"; do
+    if [ -n "$dir" ]; then
+        rm -Rf "${dir:?}"
+        mkdir -p "${dir:?}"
+    fi
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create spec list
-ls "$HOME/rpmbuild"/*/*.spec >"$HOME/Documents/rpmbuild/specs.txt"
+ls "$SPEC_DIR"/*/*.spec >"$LOG_DIR/specs.txt"
+[ -s "$LOG_DIR/specs.txt" ] || { echo "No spec files found" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clear status
-echo >"$HOME/Documents/rpmbuild/build.txt"
-echo >"$HOME/Documents/rpmbuild/status.txt"
-echo >"$HOME/Documents/rpmbuild/errors.txt"
+echo >"$LOG_DIR/build.txt"
+echo >"$LOG_DIR/status.txt"
+echo >"$LOG_DIR/errors.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
-for i in $(cat "$HOME/Documents/rpmbuild/specs.txt"); do
+for i in $(cat "$LOG_DIR/specs.txt"); do
     [ -f "$(builtin type -P yum-builddep)" ] && yum-builddep -yy -qq --skip-broken "$i"
-    rpmbuild -ba "$i" >>"$HOME/Documents/rpmbuild/build.txt" 2>>"$HOME/Documents/rpmbuild/errors.txt" && echo "$i exit code $?" >>"$HOME/Documents/rpmbuild/status.txt"
+    rpmbuild -ba "$i" >>"$LOG_DIR/build.txt" 2>>"$LOG_DIR/errors.txt" && echo "$i exit code $?" >>"$LOG_DIR/status.txt"
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
 find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign rpm packages
-find "$HOME/Documents/rpmbuild/" -iname "*.rpm" >"$HOME/Documents/rpmbuild/pkgs.txt"
-rpmsign --addsign $(cat "$HOME/Documents/rpmbuild/pkgs.txt")
+find "$SRCDIR/" -iname "*.rpm" >"$LOG_DIR/pkgs.txt"
+rpmsign --addsign $(cat "$LOG_DIR/pkgs.txt")
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 exit
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

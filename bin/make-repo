@@ -44,8 +44,8 @@ SFUSER="$SFUSER"
 LOCUSER="${LOCUSER:-root}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
-SRCDIR="$HOME/Documents/rpmbuild/$ARCH/$VERNAME$VERNUM"
-TARGETDIR="$HOME/Documents/sourceforge/$ARCH/$VERNAME$VERNUM"
+SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$ARCH/$VERNAME$VERNUM"
+TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$ARCH/$VERNAME$VERNUM"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean from previous builds
 echo "Cleaning Previous builds"
