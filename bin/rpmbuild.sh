@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+clear
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 VERNAME="el"
 DISTRO="RHEL"
 ARCH="$(uname -m)"
