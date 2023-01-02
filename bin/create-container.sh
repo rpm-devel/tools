@@ -61,7 +61,7 @@ __docker_execute() {
 SET_IMAGE="$1"
 SET_VERSION="${2:-latest}"
 C_HOME_DIR="/root"
-C_NAME="rpm-build$SET_VERSION"
+C_NAME="rpmdev$SET_VERSION"
 C_HOSTNAME="$C_NAME.casjaysdev.com"
 C_BUILD_ROOT="$C_HOME_DIR/rpmbuild"
 H_BUILD_ROOT="$HOME/Projects/github/rpm-devel"
@@ -92,7 +92,7 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
     --name $C_NAME \
     --hostname $C_HOSTNAME \
     -e TZ=America/New_York \
-    -v "$DOCKER_HOME_DIR:$C_HOME_DIR" \
+    -v "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
     -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
     -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \
     -v "$H_PKG_ROOT:$C_PKG_ROOT:z" \
