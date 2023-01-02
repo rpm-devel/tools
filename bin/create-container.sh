@@ -97,6 +97,8 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
     --name $C_NAME \
     --hostname $C_HOSTNAME \
     -e TZ=America/New_York \
+    -v "$HOME/.gnupg:$C_HOME_DIR/.gnupg:ro" \
+    -v "$HOME/.ssh:$C_HOME_DIR/.ssh:ro" \
     -v "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
     -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
     -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \

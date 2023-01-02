@@ -12,17 +12,18 @@ done
 ls "$HOME/rpmbuild"/*/*.spec >"$HOME/Documents/rpmbuild/build.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clear status
+echo >"$HOME/Documents/rpmbuild/build.txt"
 echo >"$HOME/Documents/rpmbuild/status.txt"
 echo >"$HOME/Documents/rpmbuild/errors.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
-for i in $(cat $HOME/Documents/rpmbuild/build.txt); do
-    [ -f "$(builtin type -P yum-builddep)" ] && yum-builddep -yy --skip-broken "$i"
-    rpmbuild -ba "$i" && echo "$i exit code $?" >>"$HOME/Documents/rpmbuild/status.txt" 2>>"$HOME/Documents/rpmbuild/errors.txt"
+for i in $(cat "$HOME/Documents/rpmbuild/build.txt"); do
+    [ -f "$(builtin type -P yum-builddep)" ] && yum-builddep -yy -qq --skip-broken "$i"
+    rpmbuild -ba "$i" >>"$HOME/Documents/rpmbuild/build.txt" 2>>"$HOME/Documents/rpmbuild/errors.txt" && echo "$i exit code $?" >>"$HOME/Documents/rpmbuild/status.txt"
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-find "$HOME"/.gnupg "$HOME"/.ssh -type f -exec chmod 600 {} \;
-find "$HOME"/.gnupg "$HOME"/.ssh -type d -exec chmod 700 {} \;
+find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
+find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign rpm packages
 find "$HOME/Documents/rpmbuild/" -iname "*.rpm" >"$HOME/Documents/rpmbuild/pkgs.txt"
