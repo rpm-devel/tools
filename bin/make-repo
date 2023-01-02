@@ -95,7 +95,7 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
 if [ -z "$SFUSER" ]; then
-  echo "The variables SFUSER need to be set to your sourceforge user"
+  echo "The variable SFUSER need to be set to your sourceforge user"
 else
   echo "$SFUSER is Sending to website: /home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM"
   rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
@@ -104,7 +104,7 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
 if [ -z "$SFUSER" ]; then
-  echo "The variables SFUSER need to be set to your sourceforge user"
+  echo "The variable SFUSER need to be set to your sourceforge user"
 else
   echo "$SFUSER is Sending to FRS site: /home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM"
   rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
