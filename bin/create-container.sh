@@ -97,8 +97,8 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
     --name $C_NAME \
     --hostname $C_HOSTNAME \
     -e TZ=America/New_York \
-    -v "$HOME/.gnupg:$C_HOME_DIR/.gnupg:ro" \
-    -v "$HOME/.ssh:$C_HOME_DIR/.ssh:ro" \
+    -v "$HOME/.gnupg:$C_HOME_DIR/.gnupg:z" \
+    -v "$HOME/.ssh:$C_HOME_DIR/.ssh:z" \
     -v "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
     -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
     -v "$H_RPM_ROOT:$C_RPM_ROOT:z" \
@@ -107,7 +107,7 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
   sleep 10
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute -q yum install epel-release git curl wget sudo -yy -q
+__docker_execute -q yum install epel-release git curl wget sudo rpm-devel -yy -q
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute -q git clone "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
 __docker_execute -q /usr/local/share/CasjaysDev/scripts/install.sh
