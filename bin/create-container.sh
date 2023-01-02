@@ -113,7 +113,8 @@ __docker_execute -q git clone "https://github.com/casjay-dotfiles/scripts" "/usr
 __docker_execute -q /usr/local/share/CasjaysDev/scripts/install.sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute -q git clone "https://github.com/rpm-devel/tools" "/tmp/rpm-devel"
-__docker_execute -q bash -c "/tmp/rpm-devel/install.sh && rm -Rf /tmp/rpm-devel"
+__docker_execute -q /tmp/rpm-devel/install.sh
+__docker_execute -q rm -Rf /tmp/rpm-devel
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #__docker_execute bash -c "pkmgr script https://github.com/pkmgr/centos/raw/main/scripts/development.sh"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
