@@ -51,7 +51,7 @@ for i in $(cat "$LOG_DIR/specs.txt"); do
             echo "Failed to build $i"
             echo "See $LOG_DIR/$spec_name/errors.txt for details"
         fi
-        echo "# - - - - - - - - - - - - - - - - -"
+        printf '%s\n\n' "# - - - - - - - - - - - - - - - - -"
     fi
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
