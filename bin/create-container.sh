@@ -25,6 +25,9 @@ USER="${SUDO_USER:-$USER}"
 RUN_USER="${SUDO_USER:-$USER}"
 SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+RPM_PACKAGES="epel-release git curl wget sudo rpm-devel rpm-sign rpmrebuild rpm-build bash-completion $RPM_PACKAGES "
+RPM_PACKAGES+=""
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Reopen in a terminal
 #if [ ! -t 0 ] && { [ "$1" = --term ] || [ $# = 0 ]; }; then { [ "$1" = --term ] && shift 1 || true; } && TERMINAL_APP="TRUE" myterminal -e "$APPNAME $*" && exit || exit 1; fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -107,7 +110,7 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
   sleep 10
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__docker_execute -q yum install epel-release git curl wget sudo rpm-devel -yy -q
+__docker_execute -q yum install $RPM_PACKAGES -yy -q
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute -q git clone "https://github.com/casjay-dotfiles/scripts" "/usr/local/share/CasjaysDev/scripts"
 __docker_execute -q /usr/local/share/CasjaysDev/scripts/install.sh
