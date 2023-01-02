@@ -89,7 +89,7 @@ if [ "$CONTAINER_EXiSTS" = "true" ]; then
   echo "Skipping the container creation section"
   [ "$FORCE_INST" = "true" ] || exit 1
 else
-  echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION"
+  echo "Setting up the container $C_NAME with image $SET_IMAGE and version $SET_VERSION"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "$CONTAINER_EXiSTS" != "true" ]; then
