@@ -32,6 +32,11 @@ SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 [ "$1" = "--debug" ] && set -x && export SCRIPT_OPTS="--debug" && export _DEBUG="on" && shift 1
 [ "$1" = "--force" ] && FORCE_INST="true" && shift 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if [ "$1" = "--update" ]; then
+  bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
+  exit $?
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __error() {
   echo "${1:-Something went wrong}"
   exit 1
@@ -107,6 +112,7 @@ if [ ! -d "/usr/local/share/CasjaysDev/scripts" ]; then
   __docker_execute -q /usr/local/share/CasjaysDev/scripts/install.sh
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 __docker_execute -q bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #__docker_execute bash -c "pkmgr script https://github.com/pkmgr/centos/raw/main/scripts/development.sh"
