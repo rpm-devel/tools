@@ -42,10 +42,10 @@ __docker_execute() {
   local ARGS="$*"
   echo "Executing: $ARGS" && sleep 1
   if [ "$SILENT" = "true" ]; then
-    docker exec -it $C_NAME "$ARGS" &>/dev/null
+    docker exec -it $C_NAME $ARGS &>/dev/null
     exitCode=$?
   else
-    docker exec -it $C_NAME "$ARGS"
+    docker exec -it $C_NAME $ARGS
     exitCode=$?
   fi
   if [ $exitCode -eq 0 ]; then
