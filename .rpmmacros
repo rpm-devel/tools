@@ -20,9 +20,9 @@ global debug_package  %{nil}
 %_buildrootdir        %{getenv:HOME}/.local/tmp/BUILDROOT
 %_buildroot           %{_buildrootdir}/%{name}-%{version}-%{release}.%{BuildArch}
 
-%_rpmdir              %{getenv:HOME}/Documents/rpmbuild/%BuildArch/%osver/rpms
-%_srcrpmdir           %{getenv:HOME}/Documents/rpmbuild/%BuildArch/%osver/srpm
-%_debugrpmdir         %{getenv:HOME}/Documents/rpmbuild/%BuildArch/%osver/debug
+%_rpmdir              %{getenv:HOME}/Documents/rpmbuild/RHEL/%BuildArch/%osver/rpms
+%_srcrpmdir           %{getenv:HOME}/Documents/rpmbuild/RHEL/%BuildArch/%osver/srpm
+%_debugrpmdir         %{getenv:HOME}/Documents/rpmbuild/RHEL/%BuildArch/%osver/debug
 
 %_signature           gpg
 %_gpg_path            %(echo $HOME)/.gnupg

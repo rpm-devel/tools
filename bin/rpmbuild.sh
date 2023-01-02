@@ -9,8 +9,8 @@ SPEC_DIR="$HOME/rpmbuild"
 LOG_DIR="$HOME/Documents/builds"
 BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
 BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
-SRCDIR="$HOME/Documents/rpmbuild/$ARCH/$VERNAME$VERNUM"
-TARGETDIR="$HOME/Documents/sourceforge//$ARCH/$VERNAME$VERNUM"
+SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$ARCH/$VERNAME$VERNUM"
+TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$ARCH/$VERNAME$VERNUM"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean previous build
 rm -Rf "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"
