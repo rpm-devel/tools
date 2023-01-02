@@ -9,7 +9,7 @@ for dir in rpmbuild sourceforge; do
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create spec list
-ls "$HOME/rpmbuild"/*/*.spec >"$HOME/Documents/rpmbuild/build.txt"
+ls "$HOME/rpmbuild"/*/*.spec >"$HOME/Documents/rpmbuild/specs.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clear status
 echo >"$HOME/Documents/rpmbuild/build.txt"
@@ -17,7 +17,7 @@ echo >"$HOME/Documents/rpmbuild/status.txt"
 echo >"$HOME/Documents/rpmbuild/errors.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
-for i in $(cat "$HOME/Documents/rpmbuild/build.txt"); do
+for i in $(cat "$HOME/Documents/rpmbuild/specs.txt"); do
     [ -f "$(builtin type -P yum-builddep)" ] && yum-builddep -yy -qq --skip-broken "$i"
     rpmbuild -ba "$i" >>"$HOME/Documents/rpmbuild/build.txt" 2>>"$HOME/Documents/rpmbuild/errors.txt" && echo "$i exit code $?" >>"$HOME/Documents/rpmbuild/status.txt"
 done
