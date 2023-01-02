@@ -38,7 +38,7 @@ for i in $(cat "$LOG_DIR/specs.txt"); do
     mkdir -p "$LOG_DIR/$spec_name"
     if [ -f "$(builtin type -P yum-builddep)" ]; then
         echo "Installing dependencies for $spec_name"
-        yum-builddep -yy -qq --skip-broken "$i" &>/dev/null
+        yum-builddep -yy --skip-broken "$i" >"$LOG_DIR/$spec_name/packages.txt"
     fi
     if [ -f "$(builtin type -P rpmbuild)" ]; then
         echo "Building $spec_name package"
