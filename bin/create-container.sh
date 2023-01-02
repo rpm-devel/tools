@@ -25,7 +25,7 @@ USER="${SUDO_USER:-$USER}"
 RUN_USER="${SUDO_USER:-$USER}"
 SCRIPT_SRC_DIR="${BASH_SOURCE%/*}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-RPM_PACKAGES="epel-release git curl wget sudo rpm-devel rpm-sign rpmrebuild rpm-build bash-completion $RPM_PACKAGES "
+RPM_PACKAGES="epel-release git curl wget sudo rpm-devel rpm-sign rpmrebuild rpm-build bash bash-completion $RPM_PACKAGES "
 RPM_PACKAGES+=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Reopen in a terminal
@@ -104,13 +104,14 @@ if [ "$CONTAINER_EXiSTS" != "true" ]; then
     -v "$H_PKG_ROOT:$C_PKG_ROOT:z" \
     -v "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
     -v "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
-    -v "$H_HOME_DIR/.ssh:$C_HOME_DIR/.ssh:z" \
     -v "$H_HOME_DIR/.local/dotfiles/personal:$C_HOME_DIR/.local/dotfiles/personal:z" \
     $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
   sleep 10
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute -q yum install $RPM_PACKAGES -yy -q
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute -q git clone "https://github.com/rpm-devel/tools" "/tmp/rpm-devel"
 __docker_execute -q /tmp/rpm-devel/install.sh
