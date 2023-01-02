@@ -3,6 +3,7 @@
 VERNAME="el"
 DISTRO="RHEL"
 ARCH="$(uname -m)"
+QA_RPATHS="$((0x0001 | 0x0010))"
 VERNUM="$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SPEC_DIR="$HOME/rpmbuild"
@@ -11,6 +12,7 @@ BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
 BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
 SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$ARCH/$VERNAME$VERNUM"
 TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$ARCH/$VERNAME$VERNUM"
+export QA_RPATHS
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean previous build
 rm -Rf "${SRCDIR:?}"/* "${TARGETDIR:?}"/* "${BUILDIR:?}"/* "${BUILDROOT:?}"/* "${LOG_DIR:?}"/*
