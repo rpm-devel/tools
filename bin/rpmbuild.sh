@@ -9,16 +9,12 @@ SPEC_DIR="$HOME/rpmbuild"
 LOG_DIR="$HOME/Documents/builds"
 BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
 BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
-SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$ARCH/$VERNAME$VERNUM"
-TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$ARCH/$VERNAME$VERNUM"
+SRCDIR="$HOME/Documents/rpmbuild/$ARCH/$VERNAME$VERNUM"
+TARGETDIR="$HOME/Documents/sourceforge//$ARCH/$VERNAME$VERNUM"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean previous build
-for dir in "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"; do
-    if [ -n "$dir" ]; then
-        rm -Rf "${dir:?}"
-        mkdir -p "${dir:?}"
-    fi
-done
+rm -Rf "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"
+mkdir -p "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create spec list
 ls "$SPEC_DIR"/*/*.spec >"$LOG_DIR/specs.txt"
@@ -38,7 +34,7 @@ for i in $(cat "$LOG_DIR/specs.txt"); do
     mkdir -p "$LOG_DIR/$spec_name"
     if [ -f "$(builtin type -P yum-builddep)" ]; then
         echo "Installing dependencies for $spec_name"
-        yum-builddep -yy --skip-broken "$i" >"$LOG_DIR/$spec_name/packages.txt"
+        yum-builddep -yy -q --skip-broken "$i" >"$LOG_DIR/$spec_name/packages.txt"
     fi
     if [ -f "$(builtin type -P rpmbuild)" ]; then
         echo "Building $spec_name package"
