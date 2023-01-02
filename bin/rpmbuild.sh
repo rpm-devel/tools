@@ -6,7 +6,7 @@ ARCH="$(uname -m)"
 VERNUM="$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SPEC_DIR="$HOME/rpmbuild"
-LOG_DIR="$HOME/Documents/builds"
+LOG_DIR="$HOME/Documents/logs"
 BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
 BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
 SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$ARCH/$VERNAME$VERNUM"
@@ -19,11 +19,6 @@ mkdir -p "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"
 # Create spec list
 ls "$SPEC_DIR"/*/*.spec >"$LOG_DIR/specs.txt"
 [ -s "$LOG_DIR/specs.txt" ] || { echo "No spec files found" && exit 1; }
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Clear status
-echo >"$LOG_DIR/build.txt"
-echo >"$LOG_DIR/status.txt"
-echo >"$LOG_DIR/errors.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
 find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
