@@ -31,8 +31,18 @@ echo >"$LOG_DIR/errors.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
 for i in $(cat "$LOG_DIR/specs.txt"); do
-    [ -f "$(builtin type -P yum-builddep)" ] && yum-builddep -yy -qq --skip-broken "$i"
-    rpmbuild -ba "$i" >>"$LOG_DIR/build.txt" 2>>"$LOG_DIR/errors.txt" && echo "$i exit code $?" >>"$LOG_DIR/status.txt"
+    spec_name="$(basename "${i//.spec/}")"
+    if [ -f "$(builtin type -P yum-builddep)" ]; then
+        echo "Installing dependencies for $spec_name"
+        yum-builddep -yy -qq --skip-broken "$i" &>/dev/null
+    fi
+    if [ -f "$(builtin type -P rpmbuild)" ]; then
+        echo "Building $spec_name package"
+        rpmbuild -ba "$i" >>"$LOG_DIR/build.txt" 2>"$LOG_DIR/errors.$spec_name.txt"
+        statusCode="$?"
+        echo "$i exit code $statusCode" >>"$LOG_DIR/status.txt"
+        [ $statusCode -eq 0 ] && echo "Done building $spec_name" || echo "Failed to build $spec_name - See $LOG_DIR/errors.$spec_name.txt for details"
+    fi
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
