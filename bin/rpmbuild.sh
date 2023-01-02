@@ -17,7 +17,7 @@ TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$ARCH/$VERNAME$VERNUM"
 export QA_RPATHS="${QA_RPATHS:-$((0x0001 | 0x0010))}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean previous build
-rm -Rf "${SRCDIR:?}"/* "${TARGETDIR:?}"/* "${BUILDIR:?}"/* "${BUILDROOT:?}"/* "${LOG_DIR:?}"/*/*
+rm -Rf "${SRCDIR:?}"/* "${TARGETDIR:?}"/* "${BUILDIR:?}"/* "${BUILDROOT:?}"/*
 mkdir -p "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create spec list
