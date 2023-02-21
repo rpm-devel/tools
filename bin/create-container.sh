@@ -150,23 +150,27 @@ __setup_build() {
     exit 1
   fi
   if docker ps -a 2>&1 | grep -q "$C_NAME"; then
-    CONTAINER_EXiSTS="true"
+    CONTAINER_EXISTS="true"
   else
-    CONTAINER_EXiSTS="false"
+    CONTAINER_EXISTS="false"
   fi
-  if [ "$CONTAINER_EXiSTS" = "true" ]; then
+  if [ "$CONTAINER_EXISTS" = "true" ]; then
     if [ "$FORCE_INST" = "true" ]; then
-      echo "A container already exist with the name $C_NAME"
+      echo "Deleting existing container: $C_NAME"
       docker rm -f $C_NAME
+      CONTAINER_EXISTS="false"
     else
+      if [ "$ENTER_CONTAINER" = "true" ]; then
+        echo "Entering container: $C_NAME"
+        docker exec -it $C_NAME /bin/bash
+        exit $?
+      fi
       echo "Skipping the container creation section"
-      docker exec -it $C_NAME /bin/bash
-      exit $?
     fi
   else
     echo "Setting up the container $C_NAME with image $SET_IMAGE and version $SET_VERSION for $PLATFORM"
   fi
-  if [ "$CONTAINER_EXiSTS" != "true" ]; then
+  if [ "$CONTAINER_EXISTS" != "true" ]; then
     docker run -d \
       --name $C_NAME \
       --workdir $C_HOME_DIR \
@@ -213,7 +217,7 @@ SHORTOPTS=""
 SHORTOPTS+=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LONGOPTS="completions:,config,debug,help,options,raw,version"
-LONGOPTS+=",platform,update"
+LONGOPTS+=",platform,update,enter"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ARRAY="all arm amd 8 9 "
 ARRAY+=""
@@ -286,6 +290,10 @@ while :; do
     shift 1
     bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
     exit $?
+    ;;
+  --enter)
+    shift 1
+    ENTER_CONTAINER="true"
     ;;
   --)
     shift 1
