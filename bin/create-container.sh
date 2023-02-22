@@ -306,7 +306,7 @@ while :; do
   esac
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [ "$(uname -a)" = "x86_64" ]; then
+if [ "$(uname -m)" = "x86_64" ]; then
   echo "Enabling multiarch support"
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null || exit 1
 else
