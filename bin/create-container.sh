@@ -190,12 +190,11 @@ __setup_build() {
     sleep 10
   fi
   __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
-  __docker_execute curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh" -o "/tmp/development.sh"
   __docker_execute -q yum install --skip-broken -yy -q epel-release
   __docker_execute -q yum install --skip-broken -yy -q $RPM_PACKAGES
   __docker_execute -q yum clean all
-  __docker_execute chmod 755 "/tmp/development.sh"
-  __docker_execute bash -c "/tmp/development.sh"
+  __docker_execute curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh" -o "$C_HOME_DIR/development.sh"
+  __docker_execute chmod 755 "$C_HOME_DIR/development.sh"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined variables/import external variables
