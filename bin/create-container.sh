@@ -85,7 +85,7 @@ __help() {
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
   __printf_opts "rpm-build:  - $VERSION"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-  __printf_line "Usage: rpm-build [options] [commands] [amd64,arm64]"
+  __printf_line "Usage: rpm-build [options] [commands] [linux/amd64,linux/arm64]"
   __printf_line "all                - Build all versions for ARM64 and AMD64"
   __printf_line "arm                - Build all versions for ARM64"
   __printf_line "amd                - Build all versions for AMD64"
@@ -133,7 +133,7 @@ __docker_execute() {
 __setup_build() {
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
-  PLATFORM="${3:-linux/$PLATFORM}"
+  PLATFORM="${3:-$PLATFORM}"
   C_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
   C_HOME_DIR="/root"
   H_HOME_DIR="$HOME"
@@ -177,9 +177,9 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" != "true" ]; then
     docker run -d \
       --name $C_NAME \
+      --platform $PLATFORM \
       --workdir $C_HOME_DIR \
       --hostname $C_HOSTNAME \
-      --platform ${PLATFORM:-linux/amd64} \
       --env TZ=America/New_York \
       --volume "$H_RPM_ROOT:$C_RPM_ROOT:z" \
       --volume "$H_PKG_ROOT:$C_PKG_ROOT:z" \
@@ -287,7 +287,7 @@ while :; do
     exit $?
     ;;
   --platform)
-    PLATFORM="linux/$2"
+    PLATFORM="$2"
     shift 2
     ;;
   --update)
