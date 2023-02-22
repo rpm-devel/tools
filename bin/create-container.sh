@@ -174,9 +174,6 @@ __setup_build() {
   else
     echo "Setting up the container $C_NAME with image $SET_IMAGE and version $SET_VERSION for $PLATFORM"
   fi
-  if [ $(uname -a) = "x86_64" ]; then
-    docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null || exit 1
-  fi
   if [ "$CONTAINER_EXISTS" != "true" ]; then
     docker run -d \
       --name $C_NAME \
@@ -310,6 +307,8 @@ while :; do
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "$(uname -a)" = "x86_64" ]; then
+  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null || exit 1
+else
   echo "This requires a x86_64 distro"
   exit 1
 fi
