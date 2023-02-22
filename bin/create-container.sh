@@ -146,7 +146,7 @@ __setup_build() {
   C_PKG_ROOT="$C_HOME_DIR/Documents/sourceforge"
   H_PKG_ROOT="$HOME/Documents/builds/sourceforge"
   DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$C_ARCH/$SET_IMAGE$SET_VERSION"
-  RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo rpm-devel "
+  RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash rpm-devel "
   RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion "
 
   if [ -z "$SET_IMAGE" ]; then
@@ -194,7 +194,8 @@ __setup_build() {
   __docker_execute -q yum install --skip-broken -yy -q epel-release
   __docker_execute -q yum install --skip-broken -yy -q $RPM_PACKAGES
   __docker_execute -q yum clean all
-  __docker_execute bash "/tmp/development.sh"
+  __docker_execute chmod 755 "/tmp/development.sh"
+  __docker_execute bash -c "/tmp/development.sh"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined variables/import external variables
