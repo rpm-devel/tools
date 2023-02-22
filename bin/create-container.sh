@@ -85,8 +85,12 @@ __help() {
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
   __printf_opts "rpm-build:  - $VERSION"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-  __printf_line "Usage: rpm-build [options] [commands]"
-  __printf_line " - "
+  __printf_line "Usage: rpm-build [options] [commands] [amd64,arm64]"
+  __printf_line "all                - Build all versions for ARM64 and AMD64"
+  __printf_line "arm                - Build all versions for ARM64"
+  __printf_line "amd                - Build all versions for AMD64"
+  __printf_line "8                  - Build version 8 for PLATFORM"
+  __printf_line "9                  - Build version 9 for PLATFORM"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
   __printf_opts "Other Options"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
@@ -129,7 +133,7 @@ __docker_execute() {
 __setup_build() {
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
-  PLATFORM="${3:-$PLATFORM}"
+  PLATFORM="${3:-linux/$PLATFORM}"
   C_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
   C_HOME_DIR="/root"
   H_HOME_DIR="$HOME"
@@ -283,7 +287,7 @@ while :; do
     exit $?
     ;;
   --platform)
-    PLATFORM=$2
+    PLATFORM="linux/$2"
     shift 2
     ;;
   --update)
