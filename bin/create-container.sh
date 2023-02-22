@@ -309,7 +309,7 @@ while :; do
   esac
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [ $(uname -a) = "x86_64" ]; then
+if [ "$(uname -a)" = "x86_64" ]; then
   echo "This requires a x86_64 distro"
   exit 1
 fi
