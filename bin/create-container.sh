@@ -109,9 +109,9 @@ __cpu_v2_check() {
   supports_v2='awk "/cx16/&&/lahf/&&/popcnt/&&/sse4_1/&&/sse4_2/&&/ssse3/ {found=1} END {exit !found}"'
   supports_v3='awk "/avx/&&/avx2/&&/bmi1/&&/bmi2/&&/f16c/&&/fma/&&/abm/&&/movbe/&&/xsave/ {found=1} END {exit !found}"'
   supports_v4='awk "/avx512f/&&/avx512bw/&&/avx512cd/&&/avx512dq/&&/avx512vl/ {found=1} END {exit !found}"'
-  echo "$flags" | eval $supports_v2 && echo "CPU supports x86-64-v2"
-  echo "$flags" | eval $supports_v3 && echo "CPU supports x86-64-v3"
-  echo "$flags" | eval $supports_v4 && echo "CPU supports x86-64-v4"
+  echo "$flags" | eval $supports_v2 && echo "CPU supports x86-64-v2" || true
+  echo "$flags" | eval $supports_v3 && echo "CPU supports x86-64-v3" || true
+  echo "$flags" | eval $supports_v4 && echo "CPU supports x86-64-v4" || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __error() {
@@ -162,7 +162,7 @@ __setup_build() {
   DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$C_ARCH/$SET_IMAGE$SET_VERSION"
   RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
   RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion "
-  CPU_CHECK="$(__cpu_v2_check | grep -q 'x86-64-v2' && echo 'x86-64-v2' || echo '')"
+  CPU_CHECK="$(__cpu_v2_check | grep 'x86-64-v2' || echo '')"
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     [ -z "$CPU_CHECK" ] && echo "CPU does not support x86-64-v2" && exit 1
   fi
