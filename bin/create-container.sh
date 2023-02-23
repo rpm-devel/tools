@@ -164,11 +164,6 @@ __setup_build() {
       docker rm -f $C_NAME
       CONTAINER_EXISTS="false"
     else
-      if [ "$ENTER_CONTAINER" = "true" ]; then
-        echo "Entering container: $C_NAME"
-        docker exec -it $C_NAME /bin/bash
-        exit $?
-      fi
       echo "Skipping the container creation section"
     fi
   else
@@ -193,8 +188,14 @@ __setup_build() {
   __docker_execute -q yum install --skip-broken -yy -q epel-release
   __docker_execute -q yum install --skip-broken -yy -q $RPM_PACKAGES
   __docker_execute -q yum clean all
-  __docker_execute curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh" -o "$C_HOME_DIR/development.sh"
-  __docker_execute chmod 755 "$C_HOME_DIR/development.sh"
+  __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
+  __docker_execute curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh" -o "/tmp/development.sh"
+  __docker_execute chmod 755 "/tmp/development.sh" "/tmp/rpm-dev-tools.sh"
+  if [ "$ENTER_CONTAINER" = "true" ]; then
+    echo "Entering container: $C_NAME"
+    docker exec -it $C_NAME /bin/bash
+    exit $?
+  fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined variables/import external variables
