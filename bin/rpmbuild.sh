@@ -37,6 +37,7 @@ for i in $(cat "$LOG_DIR/specs.txt"); do
     fi
     if [ -f "$(builtin type -P rpmbuild)" ]; then
         echo "Building $spec_name package"
+        echo "Building $spec_name package on $(date +'%Y-%m-%d at %H:%M')" | tee -a "$LOG_DIR/$spec_name/errors.txt" "$LOG_DIR/$spec_name/build.txt" &>/dev/null
         rpmbuild -ba "$i" 2>"$LOG_DIR/$spec_name/errors.txt" >"$LOG_DIR/$spec_name/build.txt"
         statusCode="$?"
         echo "$i exit code $statusCode" >>"$LOG_DIR/$spec_name/status.txt"
