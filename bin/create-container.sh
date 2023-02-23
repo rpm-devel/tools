@@ -109,6 +109,10 @@ __error() {
   exit 1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__qemu_static_image() {
+  docker images 2>&1 | grep -q 'multiarch/qemu-user-static' && return 1 || return 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute() {
   [ "$1" = "-q" ] && SILENT="true" && shift 1
   local ARGS="$*"
@@ -308,8 +312,10 @@ while :; do
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "$(uname -m)" = "x86_64" ]; then
-  [ -n "$ENTER_CONTAINER" ] || echo "Enabling multiarch support"
-  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null || exit 1
+  if __qemu_static_image; then
+    [ -n "$ENTER_CONTAINER" ] || echo "Enabling multiarch support"
+    docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null || exit 1
+  fi
 else
   echo "This requires a x86_64 distro"
   exit 1
