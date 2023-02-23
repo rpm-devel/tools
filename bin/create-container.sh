@@ -19,7 +19,7 @@
 # @@Template         :  shell/sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 APPNAME="$(basename "$0" 2>/dev/null)"
-VERSION="202302221911-git"
+VERSION="202302221946-git"
 HOME="${USER_HOME:-$HOME}"
 USER="${SUDO_USER:-$USER}"
 RUN_USER="${SUDO_USER:-$USER}"
