@@ -239,7 +239,7 @@ SHORTOPTS=""
 SHORTOPTS+=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LONGOPTS="completions:,config,debug,help,options,raw,version"
-LONGOPTS+=",platform,update,enter"
+LONGOPTS+=",platform,update,enter,image:"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ARRAY="all arm amd 8 9 "
 ARRAY+=""
@@ -317,6 +317,10 @@ while :; do
     shift 1
     ENTER_CONTAINER="true"
     ;;
+  --image)
+    CONTAINER_IMAGE="$2"
+    shift 2
+    ;;
   --)
     shift 1
     break
@@ -334,41 +338,43 @@ else
   exit 1
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+CONTAINER_IMAGE="${CONTAINER_IMAGE:-casjaysdevdocker/rockylinux}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main application
 case "$1" in
 all)
   shift $#
-  __setup_build "rockylinux/rockylinux" "8" "linux/arm64"
-  __setup_build "rockylinux/rockylinux" "8" "linux/amd64"
-  __setup_build "rockylinux/rockylinux" "9" "linux/arm64"
-  __setup_build "rockylinux/rockylinux" "9" "linux/amd64"
+  __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
+  __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
+  __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
+  __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
   ;;
 
 arm)
   shift $#
-  __setup_build "rockylinux/rockylinux" "8" "linux/arm64"
-  __setup_build "rockylinux/rockylinux" "9" "linux/arm64"
+  __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
+  __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
   ;;
 
 amd)
   shift $#
-  __setup_build "rockylinux/rockylinux" "8" "linux/amd64"
-  __setup_build "rockylinux/rockylinux" "9" "linux/amd64"
+  __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
+  __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
   ;;
 
 8)
   shift 1
-  __setup_build "rockylinux/rockylinux" "8" "${1:-$PLATFORM}"
+  __setup_build "$CONTAINER_IMAGE" "8" "${1:-$PLATFORM}"
   ;;
 
 9)
   shift 1
-  __setup_build "rockylinux/rockylinux" "9" "${1:-$PLATFORM}"
+  __setup_build "$CONTAINER_IMAGE" "9" "${1:-$PLATFORM}"
   ;;
 
 *)
   shift 1
-  [ $# -eq 0 ] && printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME rockylinux/rockylinux 8 linux/amd64" && exit 1
+  [ $# -eq 0 ] && printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $CONTAINER_IMAGE 8 linux/amd64" && exit 1
   __setup_build "$1" "$2" "${3:-$PLATFORM}"
   ;;
 
