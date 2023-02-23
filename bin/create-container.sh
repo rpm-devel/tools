@@ -340,20 +340,20 @@ all)
   shift $#
   __setup_build "rockylinux/rockylinux" "8" "linux/arm64"
   __setup_build "rockylinux/rockylinux" "8" "linux/amd64"
-  #__setup_build "rockylinux/rockylinux" "9" "linux/arm64"
-  #__setup_build "rockylinux/rockylinux" "9" "linux/amd64"
+  __setup_build "rockylinux/rockylinux" "9" "linux/arm64"
+  __setup_build "rockylinux/rockylinux" "9" "linux/amd64"
   ;;
 
 arm)
   shift $#
   __setup_build "rockylinux/rockylinux" "8" "linux/arm64"
-  #__setup_build "rockylinux/rockylinux" "9" "linux/arm64"
+  __setup_build "rockylinux/rockylinux" "9" "linux/arm64"
   ;;
 
 amd)
   shift $#
   __setup_build "rockylinux/rockylinux" "8" "linux/amd64"
-  #__setup_build "rockylinux/rockylinux" "9" "linux/amd64"
+  __setup_build "rockylinux/rockylinux" "9" "linux/amd64"
   ;;
 
 8)
@@ -363,9 +363,7 @@ amd)
 
 9)
   shift 1
-  echo "Version 9 is unavailable"
-  exit 1
-  #__setup_build "rockylinux/rockylinux" "9" "${1:-$PLATFORM}"
+  __setup_build "rockylinux/rockylinux" "9" "${1:-$PLATFORM}"
   ;;
 
 *)
