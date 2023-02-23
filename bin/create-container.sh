@@ -313,7 +313,7 @@ done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "$(uname -m)" = "x86_64" ]; then
   if __qemu_static_image; then
-    [ -n "$ENTER_CONTAINER" ] || echo "Enabling multiarch support"
+    echo "Enabling multiarch support"
     docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null || exit 1
   fi
 else
