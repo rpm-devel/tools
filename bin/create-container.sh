@@ -163,7 +163,7 @@ __setup_build() {
   RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
   RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion "
   CPU_CHECK="$(__cpu_v2_check | grep -q 'x86-64-v2' && echo 'x86-64-v2' || echo '')"
-  if [ "$SET_VERSION" = '9' ] && [ "$(uname -m)" = "x86_64" ]; then
+  if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     [ -z "$CPU_CHECK" ] && echo "CPU does not support x86-64-v2" && exit 1
   fi
   if [ -z "$SET_IMAGE" ]; then
