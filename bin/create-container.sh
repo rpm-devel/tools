@@ -198,7 +198,7 @@ __setup_build() {
       --volume "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
       --volume "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
       --volume "$H_HOME_DIR/.local/dotfiles/personal:$C_HOME_DIR/.local/dotfiles/personal:z" \
-      $SET_IMAGE:$SET_VERSION init &>/dev/null || __error "Failed to create container"
+      $SET_IMAGE:$SET_VERSION &>/dev/null || __error "Failed to create container"
     sleep 10
   fi
   __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
