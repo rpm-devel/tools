@@ -19,6 +19,7 @@
 # @@Template         :  shell/sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -z "$(builtin type -P git)" ]; then
+  echo "Installing git"
   yum install -yy -q git >/dev/null 2>&1 || { echo "This script requires git" && exit 1; }
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -29,22 +30,24 @@ git clone -q "https://github.com/rpm-devel/tools" "/tmp/rpm-dev-tools" || { echo
 if [ "$USER" = "root" ] || [ "$(whoami)" = "root" ]; then
   echo "Setting bin dir to /usr/local/bin"
   U_BIN="/usr/local/bin"
-  cp -Rf "/tmp/rpm-dev-tools/bin/." "/usr/local/bin/"
 elif [ -d "$HOME/.bin" ]; then
   echo "Setting bin dir to ~/.bin"
   U_BIN="$HOME/.bin"
-  cp -Rf "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 elif [ -d "$HOME/bin" ]; then
   echo "Setting bin dir to ~/bin"
   U_BIN="$HOME/bin"
-  cp -Rf "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 else
   echo "Setting bin dir to ~/.local/bin"
   U_BIN="$HOME/.local/bin"
   mkdir -p "$HOME/.local/bin"
-  cp -Rf "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 fi
+for file in "/tmp/rpm-dev-tools/bin"/*; do
+  name="$(basename "$file")"
+  echo "Updating $U_BIN/$name"
+  cp -Rf "$file" "$U_BIN/$name"
+done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+echo "Updating $HOME/.rpmmacros"
 cp -Rf "/tmp/rpm-dev-tools/.rpmmacros" "$HOME/.rpmmacros"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -f "$HOME/.rpmmacros" ] && [ -x "$U_BIN/create-container.sh" ]; then
