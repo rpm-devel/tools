@@ -66,14 +66,14 @@ rpm --addsign --quiet "$SRCDIR"/*/*.rpm "$SRCDIR"/*/*/*.rpm
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
 echo "Moving SRPMS"
-rsync -aqhP --delete "$SRCDIR"/srpm/*.rpm "$TARGETDIR/srpms/"
+rsync --no-motd -aqhP --delete "$SRCDIR"/srpm/*.rpm "$TARGETDIR/srpms/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
-rsync -aqhP "$SRCDIR"/rpms/*/*debugsource*.rpm "$TARGETDIR/debug/"
-rsync -aqhP "$SRCDIR"/rpms/*/*debuginfo*.rpm "$TARGETDIR/debug/"
+rsync --no-motd -aqhP "$SRCDIR"/rpms/*/*debugsource*.rpm "$TARGETDIR/debug/"
+rsync --no-motd -aqhP "$SRCDIR"/rpms/*/*debuginfo*.rpm "$TARGETDIR/debug/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving RPMS"
-rsync -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$SRCDIR"/rpms/*/*.rpm "$TARGETDIR/rpms/"
+rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$SRCDIR"/rpms/*/*.rpm "$TARGETDIR/rpms/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create repos
 if [ -d "$TARGETDIR/addons" ]; then
@@ -100,8 +100,8 @@ fi
 # Sync to locale FTP Server
 if [ -n "$LOCUSER" ] && curl -q -LSsf -I "ftp://$FTPDOM" &>/dev/null; then
   echo "Sending Locally: $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM"
-  rsync -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
-  rsync -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
+  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
+  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
@@ -109,8 +109,8 @@ if [ -z "$SFUSER" ]; then
   echo "The variable SFUSER need to be set to your sourceforge user"
 else
   echo "$SFUSER is Sending to website: /home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM"
-  rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
-  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
+  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
+  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
@@ -118,8 +118,8 @@ if [ -z "$SFUSER" ]; then
   echo "The variable SFUSER need to be set to your sourceforge user"
 else
   echo "$SFUSER is Sending to FRS site: /home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM"
-  rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
-  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
+  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
+  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "The script has completed"
