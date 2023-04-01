@@ -159,9 +159,9 @@ __setup_build() {
   H_RPM_ROOT="$HOME/Documents/builds/rpmbuild"
   C_PKG_ROOT="$C_HOME_DIR/Documents/sourceforge"
   H_PKG_ROOT="$HOME/Documents/builds/sourceforge"
-  DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$C_ARCH/$SET_IMAGE$SET_VERSION"
+  DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$SET_IMAGE$SET_VERSION/$C_ARCH"
   RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
-  RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion "
+  RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
   CPU_CHECK="$(__cpu_v2_check | grep 'x86-64-v2' || echo '')"
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     [ -z "$CPU_CHECK" ] && echo "CPU does not support x86-64-v2" && exit 1
