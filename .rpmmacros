@@ -5,13 +5,14 @@ global debug_package  %{nil}
 %_gpg_name            Jason Hempstead
 %vendor               %packager http://rpms.casjaysdev.com
 
-%_minorver            3
-%BuildArch            %{_arch}
-%osver                el%{?rhel}
+%_minorver            3.2
 %_pdistro             %distroname
+%_osver               el%{?rhel}
+%BuildArch            %{_arch}
 
-%dist                 %_minorver.%_pdistro.%osver
-%distribution         %_minorver.%_pdistro.%osver
+%dist                 %_minorver.%_pdistro.%_osver
+%distribution         %_minorver.%_pdistro.%_osver
+%_release_name        RHEL
 
 %_topdir              %{getenv:HOME}/rpmbuild
 %_sourcedir           %{getenv:HOME}/rpmbuild/%{name}
@@ -20,9 +21,9 @@ global debug_package  %{nil}
 %_buildrootdir        %{getenv:HOME}/.local/tmp/BUILDROOT
 %_buildroot           %{_buildrootdir}/%{name}-%{version}-%{release}.%{BuildArch}
 
-%_rpmdir              %{getenv:HOME}/Documents/rpmbuild/RHEL/%BuildArch/%osver/rpms
-%_srcrpmdir           %{getenv:HOME}/Documents/rpmbuild/RHEL/%BuildArch/%osver/srpm
-%_debugrpmdir         %{getenv:HOME}/Documents/rpmbuild/RHEL/%BuildArch/%osver/debug
+%_rpmdir              %{getenv:HOME}/Documents/rpmbuild/%_release_name/%BuildArch/%_osver/rpms
+%_srcrpmdir           %{getenv:HOME}/Documents/rpmbuild/%_release_name/%BuildArch/%_osver/srpm
+%_debugrpmdir         %{getenv:HOME}/Documents/rpmbuild/%_release_name/%BuildArch/%_osver/debug
 
 %_signature           gpg
 %_gpg_path            %(echo $HOME)/.gnupg
