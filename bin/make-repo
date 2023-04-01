@@ -57,41 +57,46 @@ mkdir -p "$TARGETDIR"/{addons,extras,srpms,debug,rpms}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
-rpm --addsign "$SRCDIR"/*/*.rpm "$SRCDIR"/*/*/*.rpm
+rpm --addsign --quiet "$SRCDIR"/*/*.rpm "$SRCDIR"/*/*/*.rpm
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
 echo "Moving SRPMS"
 rsync -aqhP --delete "$SRCDIR"/srpm/*.rpm "$TARGETDIR/srpms/"
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
 rsync -aqhP "$SRCDIR"/rpms/*/*debugsource*.rpm "$TARGETDIR/debug/"
 rsync -aqhP "$SRCDIR"/rpms/*/*debuginfo*.rpm "$TARGETDIR/debug/"
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving RPMS"
 rsync -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$SRCDIR"/rpms/*/*.rpm "$TARGETDIR/rpms/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create repos
-echo "Generating Addons REPO"
-cd "$TARGETDIR/addons" && createrepo -q -d ./
-
-echo "Generating Extras REPO"
-cd "$TARGETDIR/extras" && createrepo -q -d ./
-
-echo "Generating SRPMS REPO"
-cd "$TARGETDIR/srpms" && createrepo -q -d ./
-
-echo "Generating DEBUG REPO"
-cd "$TARGETDIR/debug" && createrepo -q -d ./
-
-echo "Generating RPMS REPO"
-cd "$TARGETDIR/rpms" && createrepo -q -d ./
-
+if [ -d "$TARGETDIR/addons" ]; then
+  echo "Generating Addons REPO"
+  cd "$TARGETDIR/addons" && createrepo -q -d ./
+fi
+if [ -d "$TARGETDIR/extras" ]; then
+  echo "Generating Extras REPO"
+  cd "$TARGETDIR/extras" && createrepo -q -d ./
+fi
+if [ -d "$TARGETDIR/srpms" ]; then
+  echo "Generating SRPMS REPO"
+  cd "$TARGETDIR/srpms" && createrepo -q -d ./
+fi
+if [ -d "$TARGETDIR/debug" ]; then
+  echo "Generating DEBUG REPO"
+  cd "$TARGETDIR/debug" && createrepo -q -d ./
+fi
+if [ -d "$TARGETDIR/rpms" ]; then
+  echo "Generating RPMS REPO"
+  cd "$TARGETDIR/rpms" && createrepo -q -d ./
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to locale FTP Server
-if curl -q -LSsf -I "ftp://$FTPDOM" && [ -n "$LOCUSER" ]; then
+if [ -n "$LOCUSER" ] && curl -q -LSsf -I "ftp://$FTPDOM" &>/dev/null; then
   echo "Sending Locally: $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM"
-  rsync -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
   rsync -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
+  rsync -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
@@ -99,8 +104,8 @@ if [ -z "$SFUSER" ]; then
   echo "The variable SFUSER need to be set to your sourceforge user"
 else
   echo "$SFUSER is Sending to website: /home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM"
-  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
   rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
+  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$ARCH/$VERNUM
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
@@ -108,8 +113,8 @@ if [ -z "$SFUSER" ]; then
   echo "The variable SFUSER need to be set to your sourceforge user"
 else
   echo "$SFUSER is Sending to FRS site: /home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM"
-  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
   rsync -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
+  rsync -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$ARCH/$VERNUM
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "The script has completed"
