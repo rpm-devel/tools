@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if [ "$1" = "update" ]; then
+    bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
+    exit $?
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 VERNAME="el"

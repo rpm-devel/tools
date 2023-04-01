@@ -18,7 +18,9 @@
 # @@sudo/root        :  no
 # @@Template         :  shell/sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[ -n "$(builtin type -P git)" ] || { echo "This script requires git" && exit 1; }
+if [ -z "$(builtin type -P git)" ]; then
+  yum install -yy -q git >/dev/null 2>&1 || { echo "This script requires git" && exit 1; }
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Setting up rpm development scripts"
 git clone -q "https://github.com/rpm-devel/tools" "/tmp/rpm-dev-tools" || { echo "Failed to clone the repo" && exit 1; }
@@ -27,25 +29,25 @@ git clone -q "https://github.com/rpm-devel/tools" "/tmp/rpm-dev-tools" || { echo
 if [ "$USER" = "root" ] || [ "$(whoami)" = "root" ]; then
   echo "Setting bin dir to /usr/local/bin"
   U_BIN="/usr/local/bin"
-  cp -R "/tmp/rpm-dev-tools/bin/." "/usr/local/bin/"
+  cp -Rf "/tmp/rpm-dev-tools/bin/." "/usr/local/bin/"
 elif [ -d "$HOME/.bin" ]; then
   echo "Setting bin dir to ~/.bin"
   U_BIN="$HOME/.bin"
-  cp -R "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
+  cp -Rf "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 elif [ -d "$HOME/bin" ]; then
   echo "Setting bin dir to ~/bin"
   U_BIN="$HOME/bin"
-  cp -R "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
+  cp -Rf "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 else
   echo "Setting bin dir to ~/.local/bin"
   U_BIN="$HOME/.local/bin"
   mkdir -p "$HOME/.local/bin"
-  cp -R "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
+  cp -Rf "/tmp/rpm-dev-tools/bin/." "$U_BIN/"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 cp -Rf "/tmp/rpm-dev-tools/.rpmmacros" "$HOME/.rpmmacros"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [ -f "$HOME/.rpmmacros" ] && [ -f "$U_BIN/create-container.sh" ]; then
+if [ -f "$HOME/.rpmmacros" ] && [ -x "$U_BIN/create-container.sh" ]; then
   echo "Setup has completed successfully"
   rm -Rf "/tmp/rpm-dev-tools"
   exit 0

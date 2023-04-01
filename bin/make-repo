@@ -40,7 +40,7 @@ SFFRS="frs.sourceforge.net"
 SFPROJ="rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Usernames
-SFUSER="$SFUSER"
+SFUSER="${SFUSER:-}"
 LOCUSER="${LOCUSER:-root}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
@@ -91,6 +91,7 @@ cd "$TARGETDIR/rpms" && createrepo -q -d ./
 if curl -q -LSsf -I "ftp://$FTPDOM" && [ -n "$LOCUSER" ]; then
   echo "Sending Locally: $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM"
   rsync -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
+  rsync -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
