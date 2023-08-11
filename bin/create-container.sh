@@ -3,7 +3,7 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ##@Version           :  202302201314-git
 # @@Author           :  Jason Hempstead
-# @@Contact          :  jason@casjaysdev.com
+# @@Contact          :  jason@casjaysdev.pro
 # @@License          :  WTFPL
 # @@ReadME           :  rpm-build --help
 # @@Copyright        :  Copyright: (c) 2023 Jason Hempstead, Casjays Developments
@@ -152,7 +152,7 @@ __setup_build() {
   C_HOME_DIR="/root"
   H_HOME_DIR="$HOME"
   C_NAME="rpmdev$SET_VERSION-$C_ARCH"
-  C_HOSTNAME="$C_NAME.casjaysdev.com"
+  C_HOSTNAME="$C_NAME.casjaysdev.pro"
   C_BUILD_ROOT="$C_HOME_DIR/rpmbuild"
   H_BUILD_ROOT="$HOME/Projects/github/rpm-devel"
   C_RPM_ROOT="$C_HOME_DIR/Documents/rpmbuild"

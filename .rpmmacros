@@ -3,7 +3,7 @@ global debug_package  %{nil}
 %distroname           casjay
 %packager             CasjaysDev
 %_gpg_name            Jason Hempstead
-%vendor               %packager http://rpms.casjaysdev.com
+%vendor               %packager http://rpms.casjaysdev.pro
 
 %_minorver            3.2
 %_pdistro             %distroname
