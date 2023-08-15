@@ -218,11 +218,11 @@ EOF
       eval "$HOME/.config/rpm-devel/scripts/$C_NAME" 2>"/tmp/$C_NAME.log" >/dev/null || __error "Failed to create container"
     else
       echo "Failed to create the intall script"
-      exit 1
+      return 1
     fi
   fi
-  docker ps -a 2>&1 | grep -q "$C_NAME" || { echo "Failed to create $C_NAME" && exit 1; }
-  docker ps 2>&1 | grep "$C_NAME" | grep -qi ' Up ' || { echo "Failed to start $C_NAME" && exit 1; }
+  docker ps -a 2>&1 | grep -q "$C_NAME" || { echo "Failed to create $C_NAME" && return 1; }
+  docker ps 2>&1 | grep "$C_NAME" | grep -qi ' Up ' || { echo "Failed to start $C_NAME" && return 1; }
   __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
   __docker_execute -q pkmgr update -q
   __docker_execute -q pkmgr install -q $RPM_PACKAGES
@@ -231,8 +231,9 @@ EOF
   if [ "$ENTER_CONTAINER" = "true" ]; then
     echo "Entering container: $C_NAME"
     docker exec -it $C_NAME /bin/bash
-    exit $?
+    return $?
   fi
+  return
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined variables/import external variables
@@ -260,7 +261,7 @@ SHORTOPTS+=""
 LONGOPTS="completions:,config,debug,help,options,raw,version"
 LONGOPTS+=",platform,update,enter,image:"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-ARRAY="all arm amd 8 9 "
+ARRAY="all arm amd 7 8 9 "
 ARRAY+=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LIST=""
