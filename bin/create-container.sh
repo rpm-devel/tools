@@ -195,7 +195,7 @@ __setup_build() {
       echo "Skipping the container creation section"
     fi
   else
-    echo "Setting up the container $C_NAME with image $SET_IMAGE and version $SET_VERSION for $PLATFORM"
+    echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION for $PLATFORM"
   fi
   if [ "$CONTAINER_EXISTS" != "true" ]; then
     cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$C_NAME"
