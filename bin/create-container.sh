@@ -371,19 +371,37 @@ amd)
 7)
   shift 1
   ENTER_CONTAINER="false"
-  __setup_build "$CONTAINER_IMAGE" "7" "${1:-$PLATFORM}"
+  if [ -n "$1" ]; then
+    __setup_build "$CONTAINER_IMAGE" "7" "${1:-$PLATFORM}"
+  else
+    __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
+    __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
+  fi
+  exit
   ;;
 
 8)
   shift 1
   ENTER_CONTAINER="false"
-  __setup_build "$CONTAINER_IMAGE" "8" "${1:-$PLATFORM}"
+  if [ -n "$1" ]; then
+    __setup_build "$CONTAINER_IMAGE" "8" "${1:-$PLATFORM}"
+  else
+    __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
+    __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
+  fi
+  exit
   ;;
 
 9)
   shift 1
   ENTER_CONTAINER="false"
-  __setup_build "$CONTAINER_IMAGE" "9" "${1:-$PLATFORM}"
+  if [ -n "$1" ]; then
+    __setup_build "$CONTAINER_IMAGE" "9" "${1:-$PLATFORM}"
+  else
+    __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
+    __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
+  fi
+  exit
   ;;
 
 *)
