@@ -201,13 +201,13 @@ __setup_build() {
       $SET_IMAGE:$SET_VERSION /usr/sbin/init 2>"/tmp/$C_NAME.log" >/dev/null || __error "Failed to create container"
     sleep 10
   fi
+  docker ps -a 2>&1 | grep -q "$C_NAME" || { echo "Failed to create $C_NAME" && exit 1; }
+  docker ps 2>&1 | grep "$C_NAME" | grep -qi ' Up ' || { echo "Failed to start $C_NAME" && exit 1; }
   __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
   __docker_execute -q yum update --skip-broken -yy -q
   __docker_execute -q yum install --skip-broken -yy -q $RPM_PACKAGES
   __docker_execute -q yum clean all
   __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
-  __docker_execute curl -q -LSsf "https://github.com/pkmgr/centos/raw/main/scripts/development.sh" -o "/tmp/development.sh"
-  __docker_execute chmod 755 "/tmp/development.sh" "/tmp/rpm-dev-tools.sh"
   if [ "$ENTER_CONTAINER" = "true" ]; then
     echo "Entering container: $C_NAME"
     docker exec -it $C_NAME /bin/bash
@@ -330,7 +330,7 @@ done
 if [ "$(uname -m)" = "x86_64" ]; then
   if __qemu_static_image; then
     echo "Enabling multiarch support"
-    docker run --rm --privileged multiarch/qemu-user-static --reset -p yes &>/dev/null || exit 1
+    docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes &>/dev/null || exit 1
   fi
 else
   echo "This requires a x86_64 distro"
@@ -343,6 +343,9 @@ CONTAINER_IMAGE="${CONTAINER_IMAGE:-casjaysdev/rhel}"
 case "$1" in
 all)
   shift $#
+  ENTER_CONTAINER="false"
+  __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
+  __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
   __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
   __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
   __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
@@ -351,23 +354,35 @@ all)
 
 arm)
   shift $#
+  ENTER_CONTAINER="false"
+  __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
   __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
   __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
   ;;
 
 amd)
   shift $#
+  ENTER_CONTAINER="false"
+  __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
   __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
   __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
   ;;
 
+7)
+  shift 1
+  ENTER_CONTAINER="false"
+  __setup_build "$CONTAINER_IMAGE" "7" "${1:-$PLATFORM}"
+  ;;
+
 8)
   shift 1
+  ENTER_CONTAINER="false"
   __setup_build "$CONTAINER_IMAGE" "8" "${1:-$PLATFORM}"
   ;;
 
 9)
   shift 1
+  ENTER_CONTAINER="false"
   __setup_build "$CONTAINER_IMAGE" "9" "${1:-$PLATFORM}"
   ;;
 
