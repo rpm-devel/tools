@@ -247,7 +247,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
 RPM_BUILD_CONFIG_FILE="settings.conf"
-RPM_BUILD_CONFIG_DIR="$HOME/.config/$APPNAME"
+RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel/$APPNAME"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # bring in user config
 [ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
