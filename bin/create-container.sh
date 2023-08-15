@@ -163,6 +163,7 @@ __setup_build() {
   RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
   RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
   CPU_CHECK="$(__cpu_v2_check | grep 'x86-64-v2' || echo '')"
+  [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     [ -z "$CPU_CHECK" ] && echo "CPU does not support x86-64-v2" && exit 1
   fi
@@ -187,19 +188,28 @@ __setup_build() {
     echo "Setting up the container $C_NAME with image $SET_IMAGE and version $SET_VERSION for $PLATFORM"
   fi
   if [ "$CONTAINER_EXISTS" != "true" ]; then
-    docker run -d \
-      --name $C_NAME \
-      --platform $PLATFORM \
-      --workdir $C_HOME_DIR \
-      --hostname $C_HOSTNAME \
-      --env TZ=America/New_York \
-      --volume "$H_RPM_ROOT:$C_RPM_ROOT:z" \
-      --volume "$H_PKG_ROOT:$C_PKG_ROOT:z" \
-      --volume "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
-      --volume "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
-      --volume "$H_HOME_DIR/.local/dotfiles/personal:$C_HOME_DIR/.local/dotfiles/personal:z" \
-      $SET_IMAGE:$SET_VERSION /usr/sbin/init 2>"/tmp/$C_NAME.log" >/dev/null || __error "Failed to create container"
-    sleep 10
+    cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$C_NAME"
+docker run -d \
+  --name $C_NAME \
+  --platform $PLATFORM \
+  --workdir $C_HOME_DIR \
+  --hostname $C_HOSTNAME \
+  --env TZ=America/New_York \
+  --volume "$H_RPM_ROOT:$C_RPM_ROOT:z" \
+  --volume "$H_PKG_ROOT:$C_PKG_ROOT:z" \
+  --volume "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
+  --volume "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
+  --volume "$H_HOME_DIR/.local/dotfiles/personal:$C_HOME_DIR/.local/dotfiles/personal:z" \
+  $SET_IMAGE:$SET_VERSION
+sleep 10
+EOF
+    if [ -f "$HOME/.config/rpm-devel/scripts/$C_NAME" ]; then
+      chmod 755 "$HOME/.config/rpm-devel/scripts/$C_NAME"
+      eval "$HOME/.config/rpm-devel/scripts/$C_NAME" 2>"/tmp/$C_NAME.log" >/dev/null || __error "Failed to create container"
+    else
+      echo "Failed to create the intall script"
+      exit 1
+    fi
   fi
   docker ps -a 2>&1 | grep -q "$C_NAME" || { echo "Failed to create $C_NAME" && exit 1; }
   docker ps 2>&1 | grep "$C_NAME" | grep -qi ' Up ' || { echo "Failed to start $C_NAME" && exit 1; }
