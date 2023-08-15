@@ -30,7 +30,7 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 VERNAME="el"
 DISTRO="RHEL"
-ARCH="$(uname -m)"
+ARCH="${ARCH:-$(uname -m)}"
 VERNUM="$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Local FTP server address

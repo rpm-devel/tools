@@ -202,7 +202,7 @@ __setup_build() {
     sleep 10
   fi
   __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
-  __docker_execute -q yum install --skip-broken -yy -q epel-release
+  __docker_execute -q yum update --skip-broken -yy -q
   __docker_execute -q yum install --skip-broken -yy -q $RPM_PACKAGES
   __docker_execute -q yum clean all
   __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
@@ -229,8 +229,7 @@ RPM_BUILD_CONFIG_FILE="settings.conf"
 RPM_BUILD_CONFIG_DIR="$HOME/.config/$APPNAME"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # bring in user config
-[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] &&
-  . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Argument/Option settings
 SETARGS=("$@")
@@ -338,7 +337,7 @@ else
   exit 1
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-CONTAINER_IMAGE="${CONTAINER_IMAGE:-casjaysdevdocker/rockylinux}"
+CONTAINER_IMAGE="${CONTAINER_IMAGE:-casjaysdev/rhel}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main application
 case "$1" in
