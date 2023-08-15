@@ -204,9 +204,9 @@ __setup_build() {
   docker ps -a 2>&1 | grep -q "$C_NAME" || { echo "Failed to create $C_NAME" && exit 1; }
   docker ps 2>&1 | grep "$C_NAME" | grep -qi ' Up ' || { echo "Failed to start $C_NAME" && exit 1; }
   __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
-  __docker_execute -q yum update --skip-broken -yy -q
-  __docker_execute -q yum install --skip-broken -yy -q $RPM_PACKAGES
-  __docker_execute -q yum clean all
+  __docker_execute -q pkmgr update -q
+  __docker_execute -q pkmgr install -q $RPM_PACKAGES
+  __docker_execute -q pkmgr clean all
   __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
   if [ "$ENTER_CONTAINER" = "true" ]; then
     echo "Entering container: $C_NAME"
