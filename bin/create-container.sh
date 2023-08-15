@@ -18,7 +18,7 @@
 # @@sudo/root        :  no
 # @@Template         :  shell/sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-APPNAME="$(basename "$0" 2>/dev/null)"
+APPNAME="create-container"
 VERSION="202302221946-git"
 HOME="${USER_HOME:-$HOME}"
 USER="${SUDO_USER:-$USER}"
@@ -89,6 +89,7 @@ __help() {
   __printf_line "all                - Build all versions for ARM64 and AMD64"
   __printf_line "arm                - Build all versions for ARM64"
   __printf_line "amd                - Build all versions for AMD64"
+  __printf_line "7                  - Build version 7 for PLATFORM"
   __printf_line "8                  - Build version 8 for PLATFORM"
   __printf_line "9                  - Build version 9 for PLATFORM"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
@@ -246,8 +247,8 @@ EOF
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
-RPM_BUILD_CONFIG_FILE="settings.conf"
-RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel/$APPNAME"
+RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"
+RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # bring in user config
 [ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
