@@ -163,10 +163,19 @@ __setup_build() {
   RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
   RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
   CPU_CHECK="$(__cpu_v2_check | grep 'x86-64-v2' || echo '')"
+  [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     [ -z "$CPU_CHECK" ] && echo "CPU does not support x86-64-v2" && exit 1
   fi
+
+  echo "Getting the default package lists"
+  for f in 7 8 9; do
+    ret_file="HOME/.config/rpm-devel/lists/$f.txt"
+    ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
+    echo "Retrieving $ret_url"
+    [ -f "$ret_file" ] || curl -q -LSsf "$ret_url" -o "$ret_file" 2>/dev/null
+  done
   if [ -z "$SET_IMAGE" ]; then
     echo "Usage: $APPNAME [imageName] [version] [platform]"
     exit 1
@@ -199,6 +208,7 @@ docker run -d \
   --volume "$H_PKG_ROOT:$C_PKG_ROOT:z" \
   --volume "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
   --volume "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
+  --volume "$HOME/.config/rpm-devel/lists/$SET_VERSION.txt/:/tmp/pkgs.txt:z" \
   --volume "$H_HOME_DIR/.local/dotfiles/personal:$C_HOME_DIR/.local/dotfiles/personal:z" \
   $SET_IMAGE:$SET_VERSION
 sleep 10
