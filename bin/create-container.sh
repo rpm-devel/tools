@@ -103,6 +103,35 @@ __help() {
   __printf_line "--raw              - Removes all formatting on output"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
 }
+__gen_config() {
+  cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+CONTAINER_NAME="rpmdev$SET_VERSION-$CONTAINER_ARCH"
+# get arch from platform variable
+CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
+# Set Home Directories
+HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
+CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
+# Docker rootfs location
+DOCKER_HOME_DIR="${DOCKER_HOME_DIR:-$HOME/.local/share/rpmbuild}"
+# Directory settings
+HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$HOME/Projects/github/rpm-devel}"
+HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}"
+HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}"
+# Where to store rpm sources
+CONTAINER_BUILD_ROOT="${CONTAINER_BUILD_ROOT:-$CONTAINER_HOME_DIR/rpmbuild}"
+# Where to save the built files
+CONTAINER_RPM_ROOT="${CONTAINER_RPM_ROOT:-$CONTAINER_HOME_DIR/Documents/rpmbuild}"
+# Where to copy the files to for public repos
+CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/sourceforge}"
+# Set the default domain name
+CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
+# Package list
+RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
+RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
+
+EOF
+  [ -f "RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] || return 1
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined functions
 __cpu_v2_check() {
@@ -129,10 +158,10 @@ __docker_execute() {
   local ARGS="$*"
   echo "Executing: $ARGS" && sleep 1
   if [ "$SILENT" = "true" ]; then
-    docker exec -it $C_NAME $ARGS &>/dev/null
+    docker exec -it $CONTAINER_NAME $ARGS &>/dev/null
     exitCode=$?
   else
-    docker exec -it $C_NAME $ARGS
+    docker exec -it $CONTAINER_NAME $ARGS
     exitCode=$?
   fi
   if [ $exitCode -eq 0 ]; then
@@ -146,92 +175,114 @@ __docker_execute() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __setup_build() {
+  # Set image version and platform
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
   PLATFORM="${3:-$PLATFORM}"
-  C_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
-  C_HOME_DIR="/root"
-  H_HOME_DIR="$HOME"
-  C_NAME="rpmdev$SET_VERSION-$C_ARCH"
-  C_HOSTNAME="$C_NAME.casjaysdev.pro"
-  C_BUILD_ROOT="$C_HOME_DIR/rpmbuild"
-  H_BUILD_ROOT="$HOME/Projects/github/rpm-devel"
-  C_RPM_ROOT="$C_HOME_DIR/Documents/rpmbuild"
-  H_RPM_ROOT="$HOME/Documents/builds/rpmbuild"
-  C_PKG_ROOT="$C_HOME_DIR/Documents/sourceforge"
-  H_PKG_ROOT="$HOME/Documents/builds/sourceforge"
-  DOCKER_HOME_DIR="$HOME/.local/share/rpmbuild/$SET_IMAGE$SET_VERSION/$C_ARCH"
+  # Set the container name
+  CONTAINER_NAME="rpmdev$SET_VERSION-$CONTAINER_ARCH"
+  # get arch from platform variable
+  CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
+  # Set Home Directories
+  HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
+  CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
+  # Docker rootfs location
+  DOCKER_HOME_DIR="${DOCKER_HOME_DIR:-$HOME/.local/share/rpmbuild}/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
+  # Directory settings
+  HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$HOME/Projects/github/rpm-devel}"
+  HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}"
+  HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}"
+  # Where to store rpm sources
+  CONTAINER_BUILD_ROOT="${CONTAINER_BUILD_ROOT:-$CONTAINER_HOME_DIR/rpmbuild}"
+  # Where to save the built files
+  CONTAINER_RPM_ROOT="${CONTAINER_RPM_ROOT:-$CONTAINER_HOME_DIR/Documents/rpmbuild}"
+  # Where to copy the files to for public repos
+  CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/sourceforge}"
+  # Set the default domain name
+  CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
+  # Set the container hostname
+  CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
+  # Package list
   RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
   RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
-  CPU_CHECK="$(__cpu_v2_check | grep 'x86-64-v2' || echo '')"
+  # Set cpu information
+  CPU_CHECK="$(__cpu_v2_check)"
+  # Create Directories
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
+  # Check if CPU is supported
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
-    [ -z "$CPU_CHECK" ] && echo "CPU does not support x86-64-v2" && exit 1
+    [ -n "$(echo "$CPU_CHECK" | grep 'x86-64-v2')" ] || echo "CPU does not support x86-64-v2" && exit 1
   fi
-
+  # Get development package lists
   echo "Getting the default package lists"
   for f in 7 8 9; do
     ret_file="HOME/.config/rpm-devel/lists/$f.txt"
     ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
-    echo "Retrieving $ret_url"
-    [ -f "$ret_file" ] || curl -q -LSsf "$ret_url" -o "$ret_file" 2>/dev/null
+    if [ ! -f "$ret_file" ]; then
+      echo "Retrieving $ret_url"
+      curl -q -LSsf "$ret_url" -o "$ret_file" 2>/dev/null
+    fi
   done
+  # Check if image is set
   if [ -z "$SET_IMAGE" ]; then
     echo "Usage: $APPNAME [imageName] [version] [platform]"
     exit 1
   fi
-  if docker ps -a 2>&1 | grep -q "$C_NAME"; then
+  # check if the container is running
+  if docker ps -a 2>&1 | grep -q "$CONTAINER_NAME"; then
     CONTAINER_EXISTS="true"
   else
     CONTAINER_EXISTS="false"
   fi
+  # Delete container
   if [ "$CONTAINER_EXISTS" = "true" ]; then
     if [ "$FORCE_INST" = "true" ]; then
-      echo "Deleting existing container: $C_NAME"
-      docker rm -f $C_NAME
+      echo "Deleting existing container: $CONTAINER_NAME"
+      docker rm -f $CONTAINER_NAME
       CONTAINER_EXISTS="false"
     else
       echo "Skipping the container creation section"
     fi
   else
-    echo "Setting up the container $C_NAME with image $SET_IMAGE:$SET_VERSION for $PLATFORM"
+    echo "Setting up the container $CONTAINER_NAME with image $SET_IMAGE:$SET_VERSION for $PLATFORM"
   fi
+  # Create container if it does not exist
   if [ "$CONTAINER_EXISTS" != "true" ]; then
-    cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$C_NAME"
+    cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
 docker run -d \
-  --name $C_NAME \
+  --name $CONTAINER_NAME \
   --platform $PLATFORM \
-  --workdir $C_HOME_DIR \
-  --hostname $C_HOSTNAME \
+  --workdir $CONTAINER_HOME_DIR \
+  --hostname $CONTAINER_HOSTNAME \
   --env TZ=America/New_York \
-  --volume "$H_RPM_ROOT:$C_RPM_ROOT:z" \
-  --volume "$H_PKG_ROOT:$C_PKG_ROOT:z" \
-  --volume "$H_BUILD_ROOT:$C_BUILD_ROOT:z" \
-  --volume "$DOCKER_HOME_DIR:$C_HOME_DIR:z" \
+  --volume "$HOST_RPM_ROOT:$CONTAINER_RPM_ROOT:z" \
+  --volume "$HOST_PKG_ROOT:$CONTAINER_PKG_ROOT:z" \
+  --volume "$HOST_BUILD_ROOT:$CONTAINER_BUILD_ROOT:z" \
+  --volume "$DOCKER_HOME_DIR:$CONTAINER_HOME_DIR:z" \
   --volume "$HOME/.config/rpm-devel/lists/$SET_VERSION.txt/:/tmp/pkgs.txt:z" \
-  --volume "$H_HOME_DIR/.local/dotfiles/personal:$C_HOME_DIR/.local/dotfiles/personal:z" \
+  --volume "$HOST_HOME_DIR/.local/dotfiles/personal:$CONTAINER_HOME_DIR/.local/dotfiles/personal:z" \
   $SET_IMAGE:$SET_VERSION
 sleep 10
 EOF
-    if [ -f "$HOME/.config/rpm-devel/scripts/$C_NAME" ]; then
-      chmod 755 "$HOME/.config/rpm-devel/scripts/$C_NAME"
-      eval "$HOME/.config/rpm-devel/scripts/$C_NAME" 2>"/tmp/$C_NAME.log" >/dev/null || __error "Failed to create container"
+    if [ -f "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" ]; then
+      chmod 755 "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
+      eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>"/tmp/$CONTAINER_NAME.log" >/dev/null || __error "Failed to create container"
     else
       echo "Failed to create the intall script"
       return 1
     fi
   fi
-  docker ps -a 2>&1 | grep -q "$C_NAME" || { echo "Failed to create $C_NAME" && return 1; }
-  docker ps 2>&1 | grep "$C_NAME" | grep -qi ' Up ' || { echo "Failed to start $C_NAME" && return 1; }
+  docker ps -a 2>&1 | grep -q "$CONTAINER_NAME" || { echo "Failed to create $CONTAINER_NAME" && return 1; }
+  docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Up ' || { echo "Failed to start $CONTAINER_NAME" && return 1; }
   __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
   __docker_execute -q pkmgr update -q
   __docker_execute -q pkmgr install -q $RPM_PACKAGES
   __docker_execute -q pkmgr clean all
   __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
   if [ "$ENTER_CONTAINER" = "true" ]; then
-    echo "Entering container: $C_NAME"
-    docker exec -it $C_NAME /bin/bash
+    echo "Entering container: $CONTAINER_NAME"
+    docker exec -it $CONTAINER_NAME /bin/bash
     return $?
   fi
   return
