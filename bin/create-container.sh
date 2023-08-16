@@ -179,10 +179,10 @@ __setup_build() {
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
   PLATFORM="${3:-$PLATFORM}"
-  # Set the container name
-  CONTAINER_NAME="rpmdev$SET_VERSION-$CONTAINER_ARCH"
   # get arch from platform variable
   CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
+  # Set the container name
+  CONTAINER_NAME="rpmdev$SET_VERSION-$CONTAINER_ARCH"
   # Set Home Directories
   HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
   CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
