@@ -214,15 +214,20 @@ __setup_build() {
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     [ -n "$(echo "$CPU_CHECK" | grep 'x86-64-v2')" ] || { echo "CPU does not support x86-64-v2" && exit 1; }
   fi
+  # check if the container is running
+  if docker ps -a 2>&1 | grep -q "$CONTAINER_NAME"; then
+    CONTAINER_EXISTS="true"
+  else
+    CONTAINER_EXISTS="false"
+  fi
   # Get development package lists
-  echo "Getting the default package lists"
   for f in 7 8 9; do
     ret_file="$HOME/.config/rpm-devel/lists/$f.txt"
     ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
     [ -d "$ret_file" ] && rm -Rf "$ret_file"
     if [ ! -s "$ret_file" ] || [ ! -f "$ret_file" ]; then
-      echo "Retrieving $ret_url"
-      curl -q -LSsf "$ret_url" -o "$ret_file" 2>/dev/null
+      echo "Getting the default package lists"
+      echo "Retrieving $ret_url" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>/dev/null
     fi
     touch "$HOME/.config/rpm-devel/lists/$f.txt"
   done
@@ -231,12 +236,6 @@ __setup_build() {
     echo "Usage: $APPNAME [imageName] [version] [platform]"
     exit 1
   fi
-  # check if the container is running
-  if docker ps -a 2>&1 | grep -q "$CONTAINER_NAME"; then
-    CONTAINER_EXISTS="true"
-  else
-    CONTAINER_EXISTS="false"
-  fi
   # Delete container
   if [ "$CONTAINER_EXISTS" = "true" ]; then
     if [ "$FORCE_INST" = "true" ]; then
@@ -244,7 +243,7 @@ __setup_build() {
       docker rm -f $CONTAINER_NAME
       CONTAINER_EXISTS="false"
     else
-      echo "Skipping the container creation section"
+      echo "$CONTAINER_NAME with image $SET_IMAGE:$SET_VERSION has already been created"
     fi
   else
     echo "Setting up the container $CONTAINER_NAME with image $SET_IMAGE:$SET_VERSION for $PLATFORM"
