@@ -275,16 +275,19 @@ EOF
   fi
   docker ps -a 2>&1 | grep -q "$CONTAINER_NAME" || { echo "Failed to create $CONTAINER_NAME" && return 1; }
   docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Up ' || { echo "Failed to start $CONTAINER_NAME" && return 1; }
-  __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
-  __docker_execute -q pkmgr update -q
-  __docker_execute -q pkmgr install -q $RPM_PACKAGES
-  __docker_execute -q pkmgr clean all
-  __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
+  if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
+    __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
+    __docker_execute -q pkmgr update -q
+    __docker_execute -q pkmgr install -q $RPM_PACKAGES
+    __docker_execute -q pkmgr clean all
+    __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
+  fi
   if [ "$ENTER_CONTAINER" = "true" ]; then
     echo "Entering container: $CONTAINER_NAME"
     docker exec -it $CONTAINER_NAME /bin/bash
     return $?
   fi
+  touch "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME"
   return
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -411,6 +414,7 @@ else
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CONTAINER_IMAGE="${CONTAINER_IMAGE:-casjaysdev/rhel}"
+[ -d "$RPM_BUILD_CONFIG_DIR/containers" ] || mkdir -p "$RPM_BUILD_CONFIG_DIR/containers"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main application
 case "$1" in
