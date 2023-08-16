@@ -189,9 +189,9 @@ __setup_build() {
   # Docker rootfs location
   DOCKER_HOME_DIR="${DOCKER_HOME_DIR:-$HOME/.local/share/rpmbuild}/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
   # Directory settings
-  HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$HOME/Projects/github/rpm-devel}"
   HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}"
   HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}"
+  HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$HOME/Projects/github/rpm-devel}"
   # Where to store rpm sources
   CONTAINER_BUILD_ROOT="${CONTAINER_BUILD_ROOT:-$CONTAINER_HOME_DIR/rpmbuild}"
   # Where to save the built files
@@ -212,12 +212,12 @@ __setup_build() {
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if CPU is supported
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
-    [ -n "$(echo "$CPU_CHECK" | grep 'x86-64-v2')" ] || echo "CPU does not support x86-64-v2" && exit 1
+    [ -n "$(echo "$CPU_CHECK" | grep 'x86-64-v2')" ] || { echo "CPU does not support x86-64-v2" && exit 1; }
   fi
   # Get development package lists
   echo "Getting the default package lists"
   for f in 7 8 9; do
-    ret_file="HOME/.config/rpm-devel/lists/$f.txt"
+    ret_file="$HOME/.config/rpm-devel/lists/$f.txt"
     ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
     if [ ! -f "$ret_file" ]; then
       echo "Retrieving $ret_url"
