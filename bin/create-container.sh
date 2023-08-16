@@ -219,10 +219,12 @@ __setup_build() {
   for f in 7 8 9; do
     ret_file="$HOME/.config/rpm-devel/lists/$f.txt"
     ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
-    if [ ! -f "$ret_file" ]; then
+    [ -d "$ret_file" ] && rm -Rf "$ret_file"
+    if [ ! -s "$ret_file" ] || [ ! -f "$ret_file" ]; then
       echo "Retrieving $ret_url"
       curl -q -LSsf "$ret_url" -o "$ret_file" 2>/dev/null
     fi
+    touch "$HOME/.config/rpm-devel/lists/$f.txt"
   done
   # Check if image is set
   if [ -z "$SET_IMAGE" ]; then
