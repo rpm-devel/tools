@@ -105,9 +105,12 @@ __help() {
 }
 __gen_config() {
   cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
-CONTAINER_NAME="rpmdev$SET_VERSION-$CONTAINER_ARCH"
-# get arch from platform variable
-CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
+# Enable specified versions
+ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
+ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
+ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
+# Set container name prefix - default: [rpmbuild8-arch]
+CONTAINER_PREFIX_NAME="rpmdev"
 # Set Home Directories
 HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
 CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
@@ -126,8 +129,7 @@ CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/sourcefo
 # Set the default domain name
 CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
 # Package list
-RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
-RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
+RPM_PACKAGES="$RPM_PACKAGES"
 
 EOF
   [ -f "RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] || return 1
@@ -182,7 +184,7 @@ __setup_build() {
   # get arch from platform variable
   CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
   # Set the container name
-  CONTAINER_NAME="rpmdev$SET_VERSION-$CONTAINER_ARCH"
+  CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
   # Set Home Directories
   HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
   CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
@@ -299,7 +301,11 @@ EOF
 #type -P sh &>/dev/null || exit 3       # exit 3 if not found
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set variables
-
+# Enable specified versions
+ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
+ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
+ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
+CONTAINER_PREFIX_NAME="${CONTAINER_PREFIX_NAME:-rpmbuild}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
 RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"
@@ -422,28 +428,40 @@ case "$1" in
 all)
   shift $#
   ENTER_CONTAINER="false"
-  __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
-  __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
-  __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
-  __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
-  __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
-  __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
+  if [ "$ENABLE_VERSION_7" = "yes" ]; then
+    __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
+    __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
+  else
+    echo "Version 7 is disabled"
+  fi
+  if [ "$ENABLE_VERSION_8" = "yes" ]; then
+    __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
+    __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
+  else
+    echo "Version 8 is disabled"
+  fi
+  if [ "$ENABLE_VERSION_9" = "yes" ]; then
+    __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
+    __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
+  else
+    echo "Version 9 is disabled"
+  fi
   ;;
 
 arm)
   shift $#
   ENTER_CONTAINER="false"
-  __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
-  __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
-  __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
+  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64" || echo "Version 7 is disabled"
+  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64" || echo "Version 8 is disabled"
+  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64" || echo "Version 9 is disabled"
   ;;
 
 amd)
   shift $#
   ENTER_CONTAINER="false"
-  __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
-  __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
-  __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
+  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64" || echo "Version 7 is disabled"
+  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64" || echo "Version 8 is disabled"
+  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64" || echo "Version 9 is disabled"
   ;;
 
 7)
