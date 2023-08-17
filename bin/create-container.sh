@@ -177,6 +177,7 @@ __docker_execute() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __setup_build() {
+  local statusCode=0
   # Set image version and platform
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
@@ -276,9 +277,10 @@ EOF
       return 1
     fi
   fi
-  docker ps -a 2>&1 | grep -q "$CONTAINER_NAME" || { echo "Failed to create $CONTAINER_NAME" && return 1; }
-  docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Created ' || { echo "$CONTAINER_NAME has been created, however it failed to start" && return 1; }
-  docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Up ' || { echo "Failed to start $CONTAINER_NAME" && return 1; }
+  docker ps -a 2>&1 | grep -q "$CONTAINER_NAME" || { echo "Failed to create $CONTAINER_NAME" && statusCode=1; }
+  docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Up ' || { echo "Failed to start $CONTAINER_NAME" && statusCode=2; }
+  docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Created ' && { echo "$CONTAINER_NAME has been created, however it failed to start" && statusCode=3; }
+  [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
     __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
     __docker_execute -q pkmgr update -q
