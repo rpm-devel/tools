@@ -132,7 +132,7 @@ CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
 RPM_PACKAGES="$RPM_PACKAGES"
 
 EOF
-  [ -f "RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] || return 1
+  [ -f "RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" || return 1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined functions
@@ -277,6 +277,7 @@ EOF
     fi
   fi
   docker ps -a 2>&1 | grep -q "$CONTAINER_NAME" || { echo "Failed to create $CONTAINER_NAME" && return 1; }
+  docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Created ' || { echo "$CONTAINER_NAME has been created, however it failed to start" && return 1; }
   docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Up ' || { echo "Failed to start $CONTAINER_NAME" && return 1; }
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
     __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
@@ -312,7 +313,7 @@ RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"
 RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # bring in user config
-[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" || __gen_config &>/dev/null
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Argument/Option settings
 SETARGS=("$@")
