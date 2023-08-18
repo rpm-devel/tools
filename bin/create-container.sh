@@ -217,7 +217,7 @@ __setup_build() {
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
   RPM_PACKAGES="$(echo "$RPM_PACKAGES" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-  LOG_FILE="$TEMP_DIR/$CONTAINER_NAME.log"
+  LOG_FILE="$TEMP_DIR/${CONTAINER_NAME//$-$CONTAINER_ARCH/}.log"
   # Create Directories
   [ -d "$TEMP_DIR" ] || mkdir -p "$TEMP_DIR"
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
