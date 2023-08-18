@@ -563,7 +563,7 @@ amd)
   ;;
 
 remove)
-  RM_OPTS="${*:-$CONTAINER_IMAGE $PLATFORM}"
+  RM_OPTS="${*:-*}"
   __setup_build remove "${RM_OPTS[@]}"
   exit
   ;;
