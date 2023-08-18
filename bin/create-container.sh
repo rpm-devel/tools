@@ -202,6 +202,11 @@ __setup_build() {
   CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
+  # Check if image is set
+  if [ -z "$SET_IMAGE" ]; then
+    echo "Usage: $APPNAME [imageName] [version] [platform]"
+    exit 1
+  fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
     [ "$1" = "all" ] && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
     [ -n "$1" ] && __remove_container "$CONTAINER_NAME" "$HOST_DOCKER_HOME"
@@ -232,11 +237,7 @@ __setup_build() {
     fi
     touch "$HOME/.config/rpm-devel/lists/$f.txt"
   done
-  # Check if image is set
-  if [ -z "$SET_IMAGE" ]; then
-    echo "Usage: $APPNAME [imageName] [version] [platform]"
-    exit 1
-  fi
+  touch "$HOME/.config/rpm-devel/lists/$SET_VERSION.txt"
   # Delete container
   if [ "$CONTAINER_EXISTS" = "true" ]; then
     if [ "$FORCE_INST" = "true" ]; then
