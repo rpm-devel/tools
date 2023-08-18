@@ -620,7 +620,7 @@ list)
       echo "$c"
     done
   else
-    echo "Created" || echo "No rpm-devel containers created"
+    echo "No rpm-devel containers created"
   fi
   ;;
 
