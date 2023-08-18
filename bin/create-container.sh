@@ -208,7 +208,7 @@ __setup_build() {
   fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
     { [ "$1" = "all" ] || [ -z "$1" ]; } && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
-    __remove_container "$CONTAINER_NAME" "$HOST_DOCKER_HOME"
+    __remove_container "$CONTAINER_NAME" "$HOST_DOCKER_HOME" $SET_VERSION
     return $?
   fi
   # Create Directories
@@ -308,6 +308,7 @@ EOF
 __remove_container() {
   local name="$1"
   local home="$2"
+  local arch="${3:-^}"
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$name.log" && LOG_MESSAGE="true"; }
   if [ "$name" = "all" ]; then
@@ -315,7 +316,7 @@ __remove_container() {
       docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
     done
     rm -Rf "$home"
-  elif docker ps -aq | grep "${name:-}"; then
+  elif docker ps -aq | grep "${name:-}" | grep "$arch"; then
     docker rm -f $name 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $name"
     rm -Rf "$home"
   else
@@ -563,10 +564,14 @@ amd)
 
 remove)
   shift 1
-  RM_OPTS="${*:-all}"
-  REMOVE_CONTAINER="true"
-  __setup_build $RM_OPTS
-  exit
+  if [ -n "$1" ]; then
+    REMOVE_CONTAINER="true"
+    __setup_build "$@"
+    exit
+  else
+    echo "Usage: $APPNAME remove [all,image] [arch] - $APPNAME remove $CONTAINER_IMAGE [amd64]"
+    exit 1
+  fi
   ;;
 
 *)
