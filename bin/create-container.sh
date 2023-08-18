@@ -182,14 +182,15 @@ __qemu_static_image() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __docker_execute() {
-  [ "$1" = "-q" ] && SILENT="true" && shift 1
+  [ "$1" = "-q" ] && SILENT="true" && shift 1 || SILENT="false"
   local ARGS="$*"
+  local exitCode=0
   echo "Executing: $ARGS" && sleep 1
-  if [ "$SILENT" = "true" ]; then
-    docker exec -ti --tty $CONTAINER_NAME $ARGS &>/dev/null
+  if [ "$SILENT" = "false" ]; then
+    docker exec -ti --tty "$CONTAINER_NAME" sh -c "$ARGS"
     exitCode=$?
   else
-    docker exec -ti --tty $CONTAINER_NAME $ARGS
+    docker exec -ti --tty "$CONTAINER_NAME" sh -c "$ARGS" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE"
     exitCode=$?
   fi
   if [ $exitCode -eq 0 ]; then
