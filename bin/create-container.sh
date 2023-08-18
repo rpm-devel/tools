@@ -496,14 +496,16 @@ done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [ "$(uname -m)" = "x86_64" ]; then
-  if __qemu_static_image; then
-    echo "Enabling multiarch support"
-    docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes &>/dev/null || exit 1
+if [ -z "$REMOVE_CONTAINER" ] && [ "$1" != "remove" ]; then
+  if [ "$(uname -m)" = "x86_64" ]; then
+    if __qemu_static_image; then
+      echo "Enabling multiarch support"
+      docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes &>/dev/null || exit 1
+    fi
+  else
+    echo "This requires a x86_64 distro"
+    exit 1
   fi
-else
-  echo "This requires a x86_64 distro"
-  exit 1
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 CONTAINER_IMAGE="${CONTAINER_IMAGE:-casjaysdev/rhel}"
