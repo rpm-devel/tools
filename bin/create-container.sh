@@ -333,8 +333,8 @@ __remove_container() {
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $STDOUT_LOG_FILE" && LOG_MESSAGE="true"; }
   touch "$STDOUT_LOG_FILE"
   if [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
+    containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
     if [ -n "$containers" ]; then
-      containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
       for c in $containers; do
         docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
       done
@@ -344,8 +344,8 @@ __remove_container() {
     rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME")"
     if [ -n "$rm_file" ]; then
       for f in $rm_file; do
-        echo "Deleting file: $rm_file"
-        rm -Rf "$rm_file"
+        echo "Deleting file: $f"
+        rm -Rf "$f"
       done
     fi
     if [ -d "$home" ]; then
@@ -365,8 +365,8 @@ __remove_container() {
     rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME" | grep "$name" | grep -E "$arch")"
     if [ -n "$rm_file" ]; then
       for f in $rm_file; do
-        echo "Deleting file: $rm_file"
-        rm -Rf "$rm_file"
+        echo "Deleting file: $f"
+        rm -Rf "$f"
       done
     fi
     if [ -d "$home" ]; then
