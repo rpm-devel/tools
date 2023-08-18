@@ -13,7 +13,7 @@
 # @Other         :
 # @Resource      :
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-APPNAME="$(basename "$0")"
+APPNAME="make-repo"
 VERSION="202202011344-git"
 USER="${SUDO_USER:-${USER}}"
 HOME="${USER_HOME:-${HOME}}"
@@ -23,17 +23,18 @@ SRC_DIR="${BASH_SOURCE%/*}"
 if [[ "$1" == "--debug" ]]; then shift 1 && set -xo pipefail && export SCRIPT_OPTS="--debug" && export _DEBUG="on"; fi
 trap 'exitCode=${exitCode:-$?};[ -n "$MAKE_REPO_TEMP_FILE" ] && [ -f "$MAKE_REPO_TEMP_FILE" ] && rm -Rf "$MAKE_REPO_TEMP_FILE" &>/dev/null' EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [ "$1" = "update" ]; then
+if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
   bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
   exit $?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 [ -n "$1" ] && ARCH="$1"
+[ -n "$2" ] && VERSION="$2"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 VERNAME="el"
 DISTRO="RHEL"
 ARCH="${ARCH:-$(uname -m)}"
-VERNUM="$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")"
+VERNUM="${VERSION:-$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Local FTP server address
 FTPDOM="ftp.casjaysdev.pro"
@@ -51,8 +52,16 @@ SFUSER="${SFUSER:-}"
 LOCUSER="${LOCUSER:-root}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
-SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"
-TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
+SRCDIR="$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"
+TARGETDIR="$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Set additional variables
+RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"
+RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# bring in user config
+[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" || __gen_config &>/dev/null
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean from previous builds
 echo "Cleaning Previous builds"

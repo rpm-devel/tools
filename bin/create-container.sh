@@ -123,9 +123,9 @@ HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}"
 # Where to store rpm sources
 CONTAINER_BUILD_ROOT="${CONTAINER_BUILD_ROOT:-$CONTAINER_HOME_DIR/rpmbuild}"
 # Where to save the built files
-CONTAINER_RPM_ROOT="${CONTAINER_RPM_ROOT:-$CONTAINER_HOME_DIR/Documents/rpmbuild}"
+CONTAINER_RPM_ROOT="${CONTAINER_RPM_ROOT:-$CONTAINER_HOME_DIR/Documents/builds/rpmbuild}"
 # Where to copy the files to for public repos
-CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/sourceforge}"
+CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/builds/sourceforge}"
 # Set the default domain name
 CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
 # Package list
@@ -184,32 +184,12 @@ __setup_build() {
   PLATFORM="${3:-$PLATFORM}"
   # get arch from platform variable
   CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
+  # Docker rootfs location
+  DOCKER_HOME_DIR="$DOCKER_HOME_DIR/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
   # Set the container name
   CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
-  # Set Home Directories
-  HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
-  CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
-  # Docker rootfs location
-  DOCKER_HOME_DIR="${DOCKER_HOME_DIR:-$HOME/.local/share/rpmbuild}/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
-  # Directory settings
-  HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}"
-  HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}"
-  HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$HOME/Projects/github/rpm-devel}"
-  # Where to store rpm sources
-  CONTAINER_BUILD_ROOT="${CONTAINER_BUILD_ROOT:-$CONTAINER_HOME_DIR/rpmbuild}"
-  # Where to save the built files
-  CONTAINER_RPM_ROOT="${CONTAINER_RPM_ROOT:-$CONTAINER_HOME_DIR/Documents/rpmbuild}"
-  # Where to copy the files to for public repos
-  CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/sourceforge}"
-  # Set the default domain name
-  CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
-  # Package list
-  RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
-  RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
-  # Set cpu information
-  CPU_CHECK="$(__cpu_v2_check)"
   # Create Directories
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
@@ -309,6 +289,28 @@ ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
 ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
 CONTAINER_PREFIX_NAME="${CONTAINER_PREFIX_NAME:-rpmbuild}"
+# Set Home Directories
+HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
+CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
+# Docker rootfs location
+DOCKER_HOME_DIR="${DOCKER_HOME_DIR:-$HOME/.local/share/rpmbuild}"
+# Directory settings
+HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}"
+HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}"
+HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$HOME/Projects/github/rpm-devel}"
+# Where to store rpm sources
+CONTAINER_BUILD_ROOT="${CONTAINER_BUILD_ROOT:-$CONTAINER_HOME_DIR/rpmbuild}"
+# Where to save the built files
+CONTAINER_RPM_ROOT="${CONTAINER_RPM_ROOT:-$CONTAINER_HOME_DIR/Documents/builds/rpmbuild}"
+# Where to copy the files to for public repos
+CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/builds/sourceforge}"
+# Set the default domain name
+CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
+# Package list
+RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
+RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
+# Set cpu information
+CPU_CHECK="$(__cpu_v2_check)"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
 RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"

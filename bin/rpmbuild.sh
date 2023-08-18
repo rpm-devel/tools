@@ -16,8 +16,8 @@ SPEC_DIR="$HOME/rpmbuild"
 LOG_DIR="$HOME/Documents/logs"
 BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
 BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
-SRCDIR="$HOME/Documents/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"
-TARGETDIR="$HOME/Documents/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
+SRCDIR="$HOME/Documents/builds/$DISTRO/$VERNAME$VERNUM/$ARCH"
+TARGETDIR="$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 export QA_RPATHS="${QA_RPATHS:-$((0x0001 | 0x0010))}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
