@@ -200,7 +200,6 @@ __setup_build() {
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
   PLATFORM="${3:-$PLATFORM}"
-  tmp_dir="${TMPDIR:-/tmp}"
   LOG_MESSAGE="${LOG_MESSAGE:-false}"
   # get arch from platform variable
   CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
@@ -210,8 +209,9 @@ __setup_build() {
   CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
+  LOG_FILE="$TEMP_DIR/$CONTAINER_NAME.log"
   # Create Directories
-  [ -d "$tmp_dir" ] || mkdir -p "$tmp_dir"
+  [ -d "$TEMP_DIR" ] || mkdir -p "$TEMP_DIR"
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if image is set
@@ -242,7 +242,7 @@ __setup_build() {
     if [ -s "$ret_file" ] || [ -f "$ret_file" ]; then
       true
     else
-      echo "Retrieving $ret_url >$ret_file" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null || echo "" >"$ret_file"
+      echo "Retrieving $ret_url >$ret_file" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>>"$LOG_FILE" >/dev/null || echo "" >"$ret_file"
     fi
     touch "$HOME/.config/rpm-devel/lists/$f.txt"
   done
@@ -251,14 +251,14 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" = "true" ]; then
     if [ "$FORCE_INST" = "true" ]; then
       echo "Deleting existing container: $CONTAINER_NAME"
-      docker rm -f $CONTAINER_NAME 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null
+      docker rm -f $CONTAINER_NAME 2>>"$LOG_FILE" >/dev/null
       CONTAINER_EXISTS="false"
     else
       echo "$CONTAINER_NAME with image $SET_IMAGE:$SET_VERSION has already been created"
     fi
   else
     echo "Pulling the image $SET_IMAGE:$SET_VERSION for $PLATFORM"
-    docker pull $SET_IMAGE:$SET_VERSION 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null || { echo "Failed to pull the image" && return 1; }
+    docker pull $SET_IMAGE:$SET_VERSION 2>>"$LOG_FILE" >/dev/null || { echo "Failed to pull the image" && return 1; }
     echo "Setting up the container $CONTAINER_NAME"
   fi
   # Create container if it does not exist
@@ -281,7 +281,7 @@ sleep 10
 EOF
     if [ -f "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" ]; then
       chmod 755 "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
-      eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null || __error "Failed to create container"
+      eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>>"$LOG_FILE" >/dev/null || __error "Failed to create container"
     else
       echo "Failed to create the intall script"
       return 1
@@ -302,7 +302,7 @@ EOF
       __docker_execute curl -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
       __docker_execute sh "/tmp/rpm-dev-tools.sh"
       __docker_execute pkmgr install "/tmp/pkgs.txt"
-    ) 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null &
+    ) 2>>"$LOG_FILE" >/dev/null &
     disown
     sleep 10
   fi
@@ -320,13 +320,13 @@ __remove_container() {
   local name="${2//latest/*}"
   local arch="${3:-^}"
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
-  [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$name.log" && LOG_MESSAGE="true"; }
-  touch "$tmp_dir/$name.log"
+  [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $LOG_FILE" && LOG_MESSAGE="true"; }
+  touch "$LOG_FILE"
   if [ "$name" = "all" ]; then
     containers="$(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd64|arm64')"
     [ -n "$containers" ] || { echo "No containers exist" && return 1; }
     for c in $containers; do
-      docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
+      docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
     done
     rm -Rf "$home"
 
@@ -334,7 +334,7 @@ __remove_container() {
     containers="$(docker ps -aq | grep -E "$name|$CONTAINER_NAME" | grep -E "$arch")"
     [ -n "$containers" ] || { echo "No containers exist" && echo "Searched for $name/$CONTAINER_NAME $arch" && return 1; }
     for c in $containers; do
-      docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
+      docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
     done
     [ -d "${home//$CONTAINER_ARCH/$arch}" ] && echo "Deleting ${home//$CONTAINER_ARCH/$arch}" && rm -Rf "${home//$CONTAINER_ARCH/$arch}"
   else
@@ -381,6 +381,7 @@ URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.r
 URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 # Set cpu information
 CPU_CHECK="$(__cpu_v2_check)"
+TEMP_DIR="${TMPDIR:-/tmp}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
 RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"
