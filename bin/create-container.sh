@@ -612,6 +612,18 @@ remove)
   fi
   ;;
 
+list)
+  shift 1
+  created="$(docker ps | grep "$CONTAINER_PREFIX_NAME" | awk '{print $NF}')"
+  if [ -n "$created" ]; then
+    for c in $created; do
+      echo "$c"
+    done
+  else
+    echo "Created" || echo "No rpm-devel containers created"
+  fi
+  ;;
+
 *)
   if [ $# -eq 0 ]; then
     printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $REGISTRY_IMAGE_NAME 8 amd64"
