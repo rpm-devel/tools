@@ -327,9 +327,14 @@ __remove_container() {
       docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
     done
     rm -Rf "$home"
-  elif docker ps -aq | grep "$name" | grep "$arch"; then
-    docker rm -f $name 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $name"
-    rm -Rf "$home"
+
+  elif [ -n "$name" ]; then
+    containers="$(docker ps -aq | grep "$name" | grep -E "$arch")"
+    [ -n "$containers" ] || { echo "No containers exist" && return 1; }
+    for c in $containers; do
+      docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
+    done
+    [ -d "${home//$CONTAINER_ARCH/$arch}" ] && echo "Deleting ${home//$CONTAINER_ARCH/$arch}" && rm -Rf "${home//$CONTAINER_ARCH/$arch}"
   else
     echo "The container $name does not exist"
   fi
