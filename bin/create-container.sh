@@ -562,6 +562,7 @@ amd)
   ;;
 
 remove)
+  shift 1
   RM_OPTS="${*:-all}"
   REMOVE_CONTAINER="true"
   __setup_build $RM_OPTS
