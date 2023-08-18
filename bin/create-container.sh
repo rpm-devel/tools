@@ -145,6 +145,15 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined functions
+__list_images() {
+  cat <<EOF
+echo "image: casjaysdev/rhel 8 linux/amd64"
+echo "image: casjaysdev/rhel 8 linux/arm64"
+echo "image: casjaysdev/rhel 9 linux/arm64"
+echo "image: casjaysdev/rhel 9 linux/amd64"
+EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __cpu_v2_check() {
   flags=$(cat /proc/cpuinfo | grep flags | head -n 1 | cut -d: -f2)
   supports_v2='awk "/cx16/&&/lahf/&&/popcnt/&&/sse4_1/&&/sse4_2/&&/ssse3/ {found=1} END {exit !found}"'
@@ -318,7 +327,7 @@ __remove_container() {
       docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
     done
     rm -Rf "$home"
-  elif docker ps -aq | grep "${name:-}" | grep "$arch"; then
+  elif docker ps -aq | grep "$name" | grep "$arch"; then
     docker rm -f $name 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $name"
     rm -Rf "$home"
   else
@@ -572,15 +581,20 @@ remove)
     exit
   else
     echo "Usage: $APPNAME remove [all,image] [arch] - $APPNAME remove $CONTAINER_IMAGE [amd64]"
+    __list_images
     exit 1
   fi
   ;;
 
 *)
-  shift 1
-  [ $# -eq 0 ] && printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $CONTAINER_IMAGE 8 linux/amd64" && exit 1
-  [ "$1" = "remove" ] && shift 1 && REMOVE_CONTAINER="true"
-  __setup_build "$1" "$2" "${3:-$PLATFORM}"
+  if [ $# -eq 0 ]; then
+    printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $CONTAINER_IMAGE 8 linux/amd64"
+    __list_images
+    exit 1
+  else
+    [ "$1" = "remove" ] && shift 1 && REMOVE_CONTAINER="true"
+    __setup_build "$1" "$2" "${3:-$PLATFORM}"
+  fi
   ;;
 
 esac
