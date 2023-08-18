@@ -331,32 +331,46 @@ __remove_container() {
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $STDOUT_LOG_FILE" && LOG_MESSAGE="true"; }
   touch "$STDOUT_LOG_FILE"
   if [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
+    if [ -n "$containers" ]; then
+      containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
+      for c in $containers; do
+        docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
+      done
+    else
+      echo "No containers exist with prefix: $CONTAINER_PREFIX_NAME"
+    fi
     rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME")"
-    containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
-    [ -n "$containers" ] || { echo "No containers exist with prefix: $CONTAINER_PREFIX_NAME" && return 1; }
     if [ -n "$rm_file" ]; then
       for f in $rm_file; do
+        echo "Deleting file: $rm_file"
         rm -Rf "$rm_file"
       done
     fi
-    for c in $containers; do
-      docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
-    done
-    rm -Rf "$home"
+    if [ -d "$home" ]; then
+      echo "Deleting dir: $home"
+      rm -Rf "$home"
+    fi
   else
     [ -n "$name" ] || { echo "No container name provided" && return 1; }
-    rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME" | grep "$name" | grep -E "$arch")"
     containers="$(docker ps -a | grep "$name" | grep -E "$arch" | awk '{print $NF}')"
-    [ -n "$containers" ] || { echo "Search for $name with arch: $arch produced no results" && return 1; }
+    if [ -n "$containers" ]; then
+      for c in $containers; do
+        docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
+      done
+    else
+      echo "Search for $name with arch: $arch produced no results"
+    fi
+    rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME" | grep "$name" | grep -E "$arch")"
     if [ -n "$rm_file" ]; then
       for f in $rm_file; do
+        echo "Deleting file: $rm_file"
         rm -Rf "$rm_file"
       done
     fi
-    for c in $containers; do
-      docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
-    done
-    [ -d "${home//$CONTAINER_ARCH/$arch}" ] && echo "Deleting ${home//$CONTAINER_ARCH/$arch}" && rm -Rf "${home//$CONTAINER_ARCH/$arch}"
+    if [ -d "$home" ]; then
+      echo "Deleting dir: $home"
+      rm -Rf "$home"
+    fi
   fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
