@@ -224,6 +224,7 @@ __setup_build() {
     __remove_container "$HOST_DOCKER_HOME" "$CONTAINER_NAME" $PLATFORM
     return $?
   fi
+  [ -n "$SHOW_LOG_INFO" ] || { echo "logfile is: $LOG_FILE" && SHOW_LOG_INFO="true"; }
   # Check if CPU is supported
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     echo "$CPU_CHECK" | grep -q 'x86-64-v2' || { echo "CPU does not support x86-64-v2" && return 1; }
