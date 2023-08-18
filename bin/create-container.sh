@@ -187,7 +187,6 @@ __docker_execute() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __setup_build() {
   statusCode=0
-  [ "$1" = "remove" ] && REMOVE_CONTAINER="true" && shift 1
   # Set image version and platform
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
@@ -208,8 +207,8 @@ __setup_build() {
     exit 1
   fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
-    [ "$1" = "all" ] && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
-    [ -n "$1" ] && __remove_container "$CONTAINER_NAME" "$HOST_DOCKER_HOME"
+    { [ "$1" = "all" ] || [ -z "$1" ]; } && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
+    __remove_container "$CONTAINER_NAME" "$HOST_DOCKER_HOME"
     return $?
   fi
   # Create Directories
@@ -309,9 +308,9 @@ EOF
 __remove_container() {
   local name="$1"
   local home="$2"
-  [ -n "$name" ]
+  [ -n "$name" ] || { echo "No container name provided" && return 1; }
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$name.log" && LOG_MESSAGE="true"; }
-  if [ "$1" = "all" ]; then
+  if [ "$name" = "all" ]; then
     for c in $(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd64|arm64'); do
       docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
     done
@@ -563,7 +562,7 @@ amd)
   ;;
 
 remove)
-  RM_OPTS="${*:-* *}"
+  RM_OPTS="${*:-all}"
   REMOVE_CONTAINER="true"
   __setup_build remove "${RM_OPTS[@]}"
   exit
@@ -572,6 +571,7 @@ remove)
 *)
   shift 1
   [ $# -eq 0 ] && printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $CONTAINER_IMAGE 8 linux/amd64" && exit 1
+  [ "$1" = "remove" ] && shift 1 && REMOVE_CONTAINER="true"
   __setup_build "$1" "$2" "${3:-$PLATFORM}"
   ;;
 
