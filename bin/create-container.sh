@@ -187,22 +187,27 @@ __docker_execute() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __setup_build() {
   statusCode=0
-  LOG_MESSAGE=""
+  [ "$1" = "remove" ] && REMOVE_CONTAINER="true" && shift 1
   # Set image version and platform
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
   PLATFORM="${3:-$PLATFORM}"
   tmp_dir="${TMPDIR:-/tmp}"
+  LOG_MESSAGE="${LOG_MESSAGE:-false}"
   # get arch from platform variable
   CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
   # Docker rootfs location
-  DOCKER_HOME_DIR="$DOCKER_HOME_DIR/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
+  HOST_DOCKER_HOME="$DOCKER_HOME_DIR/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
   # Set the container name
   CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
+  if [ "$REMOVE_CONTAINER" = "true" ]; then
+    [ "$1" = "all" ] && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
+    [ -n "$1" ] && __remove_container "$CONTAINER_NAME" "$HOST_DOCKER_HOME"
+    return $?
+  fi
   # Create Directories
-  [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$CONTAINER_NAME.log" && LOG_MESSAGE="true"; }
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if CPU is supported
@@ -258,7 +263,7 @@ docker run -d \
   --volume "$HOST_RPM_ROOT:$CONTAINER_RPM_ROOT:z" \
   --volume "$HOST_PKG_ROOT:$CONTAINER_PKG_ROOT:z" \
   --volume "$HOST_BUILD_ROOT:$CONTAINER_BUILD_ROOT:z" \
-  --volume "$DOCKER_HOME_DIR:$CONTAINER_HOME_DIR:z" \
+  --volume "$HOST_DOCKER_HOME:$CONTAINER_HOME_DIR:z" \
   --volume "$HOME/.config/rpm-devel/lists/$SET_VERSION.txt/:/tmp/pkgs.txt:z" \
   --volume "$HOST_HOME_DIR/.local/dotfiles/personal:$CONTAINER_HOME_DIR/.local/dotfiles/personal:z" \
   $SET_IMAGE:$SET_VERSION
@@ -298,6 +303,24 @@ EOF
   fi
   touch "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME"
   return
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__remove_container() {
+  local name="$1"
+  local home="$2"
+  [ -n "$name" ]
+  [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$name.log" && LOG_MESSAGE="true"; }
+  if [ "$1" = "all" ]; then
+    for c in $(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd64|arm64'); do
+      docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
+    done
+    rm -Rf "$home"
+  elif docker ps -aq | grep "${name:-}"; then
+    docker rm -f $name 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $name"
+    rm -Rf "$home"
+  else
+    echo "The container $name does not exist"
+  fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # User defined variables/import external variables
@@ -352,7 +375,7 @@ SHORTOPTS=""
 SHORTOPTS+=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LONGOPTS="completions:,config,debug,help,options,raw,version"
-LONGOPTS+=",platform,update,enter,image:"
+LONGOPTS+=",remove,platform,update,enter,image:"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ARRAY="all arm amd 7 8 9 "
 ARRAY+=""
@@ -416,6 +439,10 @@ while :; do
     shift 1
     __gen_config
     exit $?
+    ;;
+  --remove)
+    shift 1
+    REMOVE_CONTAINER="true"
     ;;
   --platform)
     PLATFORM="$2"
