@@ -320,7 +320,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __remove_container() {
   local home="$1"
-  local name="$2"
+  local name="${2//*\//}"
   local arch="${3//*\//}"
   local arch="${arch:-^}"
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
