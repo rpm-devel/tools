@@ -221,7 +221,7 @@ __setup_build() {
   fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
     { [ "$1" = "all" ] || [ -z "$1" ]; } && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
-    __remove_container "$HOST_DOCKER_HOME" "$SET_IMAGE" $PLATFORM
+    __remove_container "$HOST_DOCKER_HOME" "$CONTAINER_NAME" $PLATFORM
     return $?
   fi
   # Check if CPU is supported
@@ -317,8 +317,9 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __remove_container() {
   local home="$1"
-  local name="${2//latest/*}"
-  local arch="${3:-^}"
+  local name="$2"
+  local arch="${3//*\//}"
+  local arch="${arch:-^}"
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $LOG_FILE" && LOG_MESSAGE="true"; }
   touch "$LOG_FILE"
