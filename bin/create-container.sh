@@ -150,10 +150,14 @@ EOF
 # User defined functions
 __list_images() {
   cat <<EOF
-echo "image: casjaysdev/rhel 8 linux/amd64"
-echo "image: casjaysdev/rhel 8 linux/arm64"
-echo "image: casjaysdev/rhel 9 linux/arm64"
-echo "image: casjaysdev/rhel 9 linux/amd64"
+List of images available for arm64
+$REGISTRY_IMAGE_NAME 8 linux/arm64
+$REGISTRY_IMAGE_NAME 9 linux/arm64
+List of images available for amd64
+$REGISTRY_IMAGE_NAME 7 linux/amd64
+$REGISTRY_IMAGE_NAME 8 linux/amd64
+$REGISTRY_IMAGE_NAME 9 linux/amd64
+TODO - Add fedora support
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
