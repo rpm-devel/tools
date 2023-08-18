@@ -12,8 +12,8 @@
 # @@Description      :  Bootstrap rpm dev container
 # @@Changelog        :  New script
 # @@TODO             :  Better documentation
-# @@Other            :  
-# @@Resource         :  
+# @@Other            :
+# @@Resource         :
 # @@Terminal App     :  no
 # @@sudo/root        :  no
 # @@Template         :  shell/sh
@@ -49,17 +49,18 @@ __function_exists() { builtin type $1 >/dev/null 2>&1 || return 1; }
 # Define variables
 DEFAULT_COLOR="254"
 BOOTSTRAP_EXIT_STATUS=0
+URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.rpmmacros}"
+URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main application
-case "$1" in
-*)
-  __printf_color "User ID: $SET_UID"
-  __printf_color "User Name: $RUN_USER" 3
-  __printf_color "Script Name: $APPNAME" 4
-  __printf_color "Version: $VERSION" 5
-  __printf_color "Current Working directory: $BOOTSTRAP_CWD" 6
-  ;;
-esac
+pkmgr update -q
+pkmgr install -q $RPM_PACKAGES
+cp -Rf "/etc/skel/." "/root"
+cp -Rf "/etc/bashrc" "/root/.bashrc"
+curl -q -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
+curl -q -LSsf "$URL_RPM_MACROS" -o "/root/.rpmmacros"
+sh "/tmp/rpm-dev-tools.sh"
+pkmgr install "/tmp/pkgs.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # End application
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

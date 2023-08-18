@@ -141,6 +141,7 @@ CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
 RPM_PACKAGES="$(echo "$RPM_PACKAGES" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 # url paths
 URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.rpmmacros}"
+URL_BOOTSTRAP="${URL_BOOTSTRAP:-https://github.com/rpm-devel/tools/raw/main/bin/bootstrap}"
 URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 
 EOF
@@ -312,16 +313,7 @@ EOF
   [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
     echo "$CONTAINER_NAME is executing post install scripts in the background: This may take awhile!!"
-    (
-      __docker_execute pkmgr update -q
-      __docker_execute pkmgr install -q $RPM_PACKAGES
-      __docker_execute cp -Rf "/etc/skel/." "/root"
-      __docker_execute cp -Rf "/etc/bashrc" "/root/.bashrc"
-      __docker_execute curl -q -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
-      __docker_execute curl -q -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
-      __docker_execute sh "/tmp/rpm-dev-tools.sh"
-      __docker_execute pkmgr install "/tmp/pkgs.txt"
-    ) 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" &
+    __docker_execute sh -c "$(curl -q -LSsf "$URL_BOOTSTRAP")" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" &
     sleep 10
   fi
   if [ "$ENTER_CONTAINER" = "true" ]; then
@@ -397,6 +389,7 @@ RPM_PACKAGES="git curl wget sudo bash pinentry rpm-devel "
 RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils $RPM_PACKAGES"
 # Urls
 URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.rpmmacros}"
+URL_BOOTSTRAP="${URL_BOOTSTRAP:-https://github.com/rpm-devel/tools/raw/main/bin/bootstrap}"
 URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 # Set cpu information
 CPU_CHECK="$(__cpu_v2_check)"
