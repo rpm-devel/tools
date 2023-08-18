@@ -297,6 +297,7 @@ docker run -d \
   $SET_IMAGE:$SET_VERSION
 sleep 10
 EOF
+    unset CONTAINER_HOSTNAME
     if [ -f "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" ]; then
       chmod 755 "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
       eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" || __error "Failed to create container"
