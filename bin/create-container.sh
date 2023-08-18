@@ -209,6 +209,9 @@ __setup_build() {
   PLATFORM="${3:-$PLATFORM}"
   LOG_MESSAGE="${LOG_MESSAGE:-false}"
   # get arch from platform variable
+  if [ -n "$PLATFORM" ]; then
+    echo "$PLATFORM" | grep -q '/' || PLATFORM="linux/$PLATFORM"
+  fi
   CONTAINER_ARCH="$(echo "${PLATFORM}" | awk -F '/' '{print $2}')"
   # Docker rootfs location
   HOST_DOCKER_HOME="${DOCKER_HOME_DIR}/${SET_IMAGE}${SET_VERSION}/${CONTAINER_ARCH}"
@@ -279,7 +282,7 @@ docker run -d \
   --tty \
   --interactive \
   --name $CONTAINER_NAME \
-  --platform linux/$PLATFORM \
+  --platform $PLATFORM \
   --workdir $CONTAINER_HOME_DIR \
   --hostname $CONTAINER_HOSTNAME \
   --env TZ=America/New_York \
