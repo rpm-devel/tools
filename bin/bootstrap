@@ -53,12 +53,14 @@ URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.r
 URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main application
-pkmgr update
-pkmgr install $RPM_PACKAGES
-cp -Rf "/etc/skel/." "/root/"
-curl -q -LSsf "$URL_RPM_MACROS" -o "/root/.rpmmacros" >/dev/null
-sh -c "$(curl -q -LSsf "$URL_TOOLS_INTALLER")"
-pkmgr install "/tmp/pkgs.txt"
+echo "$$" >"/tmp/bootstrap.pid"
+pkmgr update 2>/dev/stderr >/dev/stdout
+pkmgr install $RPM_PACKAGES 2>/dev/stderr >/dev/stdout
+cp -Rf "/etc/skel/." "/root/" 2>/dev/stderr >/dev/stdout
+curl -q -LSsf "$URL_RPM_MACROS" -o "/root/.rpmmacros" 2>/dev/stderr >/dev/stdout
+sh -c "$(curl -q -LSsf "$URL_TOOLS_INTALLER")" 2>/dev/stderr >/dev/stdout
+pkmgr install "/tmp/pkgs.txt" 2>/dev/stderr >/dev/stdout
+rm -Rf "/tmp/bootstrap.pid"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # End application
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
