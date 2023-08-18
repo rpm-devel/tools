@@ -285,12 +285,12 @@ EOF
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
     echo "$CONTAINER_NAME is executing post install scripts in the background: This may take awhile!!"
     (
-      __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
-      __docker_execute -q pkmgr update -q
-      __docker_execute -q pkmgr install -q $RPM_PACKAGES
-      __docker_execute -q pkmgr clean all
-      __docker_execute curl -q -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
-      __docker_execute curl -q -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
+      __docker_execute pkmgr update -q
+      __docker_execute pkmgr install -q $RPM_PACKAGES
+      __docker_execute cp -Rf "/etc/skel/." "/root"
+      __docker_execute cp -Rf "/etc/bashrc" "/root/.bashrc"
+      __docker_execute curl -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
+      __docker_execute curl -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
       __docker_execute sh "/tmp/rpm-dev-tools.sh"
       __docker_execute pkmgr install "/tmp/pkgs.txt"
     ) 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null &
