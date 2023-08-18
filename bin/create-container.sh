@@ -341,7 +341,7 @@ __remove_container() {
     else
       echo "No containers exist with prefix: $CONTAINER_PREFIX_NAME"
     fi
-    rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME")"
+    rm_file="$(find "$HOME/.config/rpm-devel" -type f -iname "*${CONTAINER_PREFIX_NAME}*")"
     if [ -n "$rm_file" ]; then
       for f in $rm_file; do
         echo "Deleting file: $f"
@@ -362,7 +362,7 @@ __remove_container() {
     else
       echo "Search for $name with arch: $arch produced no results"
     fi
-    rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME" | grep "$name" | grep -E "$arch")"
+    rm_file="$(find "$HOME/.config/rpm-devel" -type f -iname "*${CONTAINER_PREFIX_NAME}*" | grep "$name" | grep -E "$arch")"
     if [ -n "$rm_file" ]; then
       for f in $rm_file; do
         echo "Deleting file: $f"
