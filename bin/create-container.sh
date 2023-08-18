@@ -216,8 +216,7 @@ __setup_build() {
     ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
     [ -d "$ret_file" ] && rm -Rf "$ret_file"
     if [ ! -s "$ret_file" ] || [ ! -f "$ret_file" ]; then
-      echo "Getting the default package lists"
-      echo "Retrieving $ret_url" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>/dev/null
+      echo "Retrieving $ret_url >$ret_file" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null || echo "" >"$ret_file"
     fi
     touch "$HOME/.config/rpm-devel/lists/$f.txt"
   done
