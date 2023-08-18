@@ -592,11 +592,11 @@ remove)
   shift 1
   if [ -n "$1" ]; then
     REMOVE_CONTAINER="true"
-    __setup_build "$CONTAINER_IMAGE" "${1//$CONTAINER_IMAGE/}" "linux/${2:-*}"
+    __setup_build "$CONTAINER_IMAGE" "$1" "linux/${2:-*}"
     exit
   else
-    echo "Usage: $APPNAME remove [all,image] [ver] [arch] - $APPNAME remove $CONTAINER_IMAGE [8] [amd64]"
-    __list_images | sed "s|linux/||g"
+    echo "Usage: $APPNAME remove [ver] [arch] - $APPNAME remove 8 amd64 or $APPNAME remove all"
+    __list_images | awk -F ' ' '{print $1" "$2}' | sed "s|linux/||g"
     exit 1
   fi
   ;;
