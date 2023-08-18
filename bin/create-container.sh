@@ -217,7 +217,7 @@ __setup_build() {
   fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
     { [ "$1" = "all" ] || [ -z "$1" ]; } && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
-    __remove_container "$CONTAINER_NAME" "$SET_IMAGE" $SET_VERSION
+    __remove_container "$HOST_DOCKER_HOME" "$SET_IMAGE" $PLATFORM
     return $?
   fi
   # Create Directories
@@ -315,8 +315,8 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __remove_container() {
-  local name="${1//latest/*}"
-  local home="$2"
+  local home="$1"
+  local name="${2//latest/*}"
   local arch="${3:-^}"
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$name.log" && LOG_MESSAGE="true"; }
@@ -329,7 +329,7 @@ __remove_container() {
     rm -Rf "$home"
 
   elif [ -n "$name" ]; then
-    containers="$(docker ps -aq | grep "$name" | grep -E "$arch")"
+    containers="$(docker ps -aq | grep -E "$name|$CONTAINER_NAME" | grep -E "$arch")"
     [ -n "$containers" ] || { echo "No containers exist" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
@@ -585,8 +585,8 @@ remove)
     __setup_build "$CONTAINER_IMAGE" "$1" "linux/${2:-*}"
     exit
   else
-    echo "Usage: $APPNAME remove [all,image] [arch] - $APPNAME remove $CONTAINER_IMAGE [amd64]"
-    __list_images | sed "s|$CONTAINER_IMAGE ||g;s|linux/||g"
+    echo "Usage: $APPNAME remove [all,image] [ver] [arch] - $APPNAME remove $CONTAINER_IMAGE [8] [amd64]"
+    __list_images | sed "s|linux/||g"
     exit 1
   fi
   ;;
