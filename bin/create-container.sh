@@ -188,6 +188,7 @@ __setup_build() {
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
   PLATFORM="${3:-$PLATFORM}"
+  tmp_dir="${TMPDIR:-/tmp}"
   # get arch from platform variable
   CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
   # Docker rootfs location
@@ -201,7 +202,7 @@ __setup_build() {
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if CPU is supported
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
-    [ -n "$(echo "$CPU_CHECK" | grep 'x86-64-v2')" ] || { echo "CPU does not support x86-64-v2" && exit 1; }
+    echo "$CPU_CHECK" | grep -q 'x86-64-v2' || { echo "CPU does not support x86-64-v2" && return 1; }
   fi
   # check if the container is running
   if docker ps -a 2>&1 | grep -q "$CONTAINER_NAME"; then
@@ -229,13 +230,15 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" = "true" ]; then
     if [ "$FORCE_INST" = "true" ]; then
       echo "Deleting existing container: $CONTAINER_NAME"
-      docker rm -f $CONTAINER_NAME
+      docker rm -f $CONTAINER_NAME 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null
       CONTAINER_EXISTS="false"
     else
       echo "$CONTAINER_NAME with image $SET_IMAGE:$SET_VERSION has already been created"
     fi
   else
-    echo "Setting up the container $CONTAINER_NAME with image $SET_IMAGE:$SET_VERSION for $PLATFORM"
+    echo "Pulling the image $SET_IMAGE:$SET_VERSION for $PLATFORM"
+    docker pull $SET_IMAGE:$SET_VERSION 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null || { echo "Failed to pull the image" && return 1; }
+    echo "Setting up the container $CONTAINER_NAME"
   fi
   # Create container if it does not exist
   if [ "$CONTAINER_EXISTS" != "true" ]; then
@@ -257,7 +260,7 @@ sleep 10
 EOF
     if [ -f "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" ]; then
       chmod 755 "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
-      eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>"/tmp/$CONTAINER_NAME.log" >/dev/null || __error "Failed to create container"
+      eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null || __error "Failed to create container"
     else
       echo "Failed to create the intall script"
       return 1
@@ -268,13 +271,14 @@ EOF
   docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Created ' && { echo "$CONTAINER_NAME has been created, however it failed to start" && statusCode=3; }
   [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
+    echo "Starting post install scripts and out putting to: $tmp_dir/$CONTAINER_NAME.log"
     (
       __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
       __docker_execute -q pkmgr update -q
       __docker_execute -q pkmgr install -q $RPM_PACKAGES
       __docker_execute -q pkmgr clean all
       __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
-    ) 2>>"/tmp/$CONTAINER_NAME.log" >/dev/null &
+    ) 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null &
     disown
     sleep 10
   fi
