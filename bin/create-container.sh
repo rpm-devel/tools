@@ -266,6 +266,8 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" != "true" ]; then
     cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
 docker run -d \
+  --tty \
+  --interactive \
   --name $CONTAINER_NAME \
   --platform $PLATFORM \
   --workdir $CONTAINER_HOME_DIR \
