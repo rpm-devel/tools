@@ -282,13 +282,15 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" != "true" ]; then
     cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
 docker run -d \
-  -it --tty \
+  -it \
+  --tty \
   --privileged \
   --name $CONTAINER_NAME \
   --platform $PLATFORM \
   --workdir $CONTAINER_HOME_DIR \
   --hostname $CONTAINER_HOSTNAME \
   --env TZ=America/New_York \
+  --env HOSTNAME=$CONTAINER_HOSTNAME \
   --volume "$HOME/.ssh:/root/.ssh:z" \
   --volume "$HOME/.gnupg:/root/.gnupg:z" \
   --volume "$HOST_RPM_ROOT:$CONTAINER_RPM_ROOT:z" \
