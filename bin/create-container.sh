@@ -315,7 +315,7 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __remove_container() {
-  local name="$1"
+  local name="${1//latest/*}"
   local home="$2"
   local arch="${3:-^}"
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
