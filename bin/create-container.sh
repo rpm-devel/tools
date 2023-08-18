@@ -115,7 +115,7 @@ __gen_config() {
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
 ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
-# Set container name prefix - default: [rpmbuild8-arch]
+# Set container name prefix - default: [rpmdev8-arch]
 CONTAINER_PREFIX_NAME="rpmdev"
 # Set Home Directories
 HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
@@ -359,7 +359,7 @@ PLATFORM="linux/arm64"
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
 ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
-CONTAINER_PREFIX_NAME="${CONTAINER_PREFIX_NAME:-rpmbuild}"
+CONTAINER_PREFIX_NAME="${CONTAINER_PREFIX_NAME:-rpmdev}"
 # Set Home Directories
 HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
 CONTAINER_HOME_DIR="${CONTAINER_HOME_DIR:-/root}"
@@ -388,7 +388,7 @@ CPU_CHECK="$(__cpu_v2_check)"
 TEMP_DIR="${TMPDIR:-/tmp}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
-RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"
+RPM_BUILD_CONFIG_FILE="settings.conf"
 RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # bring in user config

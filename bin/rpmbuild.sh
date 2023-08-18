@@ -17,16 +17,16 @@ VERNUM="${VERSION:-$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SPEC_DIR="$HOME/rpmbuild"
 LOG_DIR="$HOME/Documents/logs"
-BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
-BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
-SRCDIR="$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"
-TARGETDIR="$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
+BUILD_DIR="$HOME/.local/tmp/BUILD_ROOT/BUILD"
+BUILD_ROOT="$HOME/.local/tmp/BUILD_ROOT/BUILD_ROOT"
+SRC_DIR="$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"
+TARGET_DIR="$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 export QA_RPATHS="${QA_RPATHS:-$((0x0001 | 0x0010))}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean previous build
-rm -Rf "${SRCDIR:?}"/* "${TARGETDIR:?}"/* "${BUILDIR:?}"/* "${BUILDROOT:?}"/*
-mkdir -p "$SRCDIR" "$TARGETDIR" "$BUILDIR" "$BUILDROOT" "$LOG_DIR"
+rm -Rf "${SRC_DIR:?}"/* "${TARGET_DIR:?}"/* "${BUILD_DIR:?}"/* "${BUILD_ROOT:?}"/*
+mkdir -p "$SRC_DIR" "$TARGET_DIR" "$BUILD_DIR" "$BUILD_ROOT" "$LOG_DIR"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create spec list
 ls "$SPEC_DIR"/*/*.spec >"$LOG_DIR/specs.txt"
@@ -60,7 +60,7 @@ for i in $spec_list; do
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign rpm packages
-find "$SRCDIR/" -iname "*.rpm" >"$LOG_DIR/pkgs.txt"
+find "$SRC_DIR/" -iname "*.rpm" >"$LOG_DIR/pkgs.txt"
 rpmsign --addsign "$(<"$LOG_DIR/pkgs.txt")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 exit
