@@ -336,7 +336,7 @@ __remove_container() {
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $LOG_FILE" && LOG_MESSAGE="true"; }
   touch "$LOG_FILE"
   if [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
-    containers="$(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd|arm')"
+    containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd|arm')"
     [ -n "$containers" ] || { echo "No containers exist" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
@@ -344,7 +344,7 @@ __remove_container() {
     rm -Rf "$home"
   else
     [ -n "$name" ] || { echo "No container name provided" && return 1; }
-    containers="$(docker ps -aq | grep "$name" | grep -E "$arch")"
+    containers="$(docker ps -a | grep "$name" | grep -E "$arch")"
     [ -n "$containers" ] || { echo "Searched for $name with arch: $arch - Does not exist" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
