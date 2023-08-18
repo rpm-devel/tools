@@ -282,6 +282,7 @@ __setup_build() {
     cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
 docker run -d \
   -it --tty \
+  --privileged \
   --name $CONTAINER_NAME \
   --platform $PLATFORM \
   --workdir $CONTAINER_HOME_DIR \
