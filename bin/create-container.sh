@@ -312,7 +312,7 @@ EOF
   [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
     echo "$CONTAINER_NAME is executing post install scripts in the background: This may take awhile!!"
-    (sleep 30 && __docker_execute sh -c "$(curl -q -LSsf "$URL_BOOTSTRAP")" &)
+    (sleep 30 && __docker_execute sh -c "$(curl -q -LSsf "$URL_BOOTSTRAP")" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" &)
   fi
   if [ "$ENTER_CONTAINER" = "true" ]; then
     echo "Entering container: $CONTAINER_NAME"
