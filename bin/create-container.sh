@@ -268,11 +268,15 @@ EOF
   docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Created ' && { echo "$CONTAINER_NAME has been created, however it failed to start" && statusCode=3; }
   [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
-    __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
-    __docker_execute -q pkmgr update -q
-    __docker_execute -q pkmgr install -q $RPM_PACKAGES
-    __docker_execute -q pkmgr clean all
-    __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
+    (
+      __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
+      __docker_execute -q pkmgr update -q
+      __docker_execute -q pkmgr install -q $RPM_PACKAGES
+      __docker_execute -q pkmgr clean all
+      __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
+    ) 2>"/tmp/$CONTAINER_NAME.log" >/dev/null &
+    disown
+    sleep 10
   fi
   if [ "$ENTER_CONTAINER" = "true" ]; then
     echo "Entering container: $CONTAINER_NAME"
