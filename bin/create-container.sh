@@ -239,7 +239,7 @@ __setup_build() {
     __remove_container "$HOST_DOCKER_HOME" "$CONTAINER_NAME" "$PLATFORM"
     return $?
   fi
-  [ -n "$SHOW_LOG_INFO" ] || { echo "logfile is: $LOG_FILE" && SHOW_LOG_INFO="true"; }
+  [ -n "$SHOW_LOG_INFO" ] || { echo "logfile is: $STDOUT_LOG_FILE" && SHOW_LOG_INFO="true"; }
   # Check if CPU is supported
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "amd64" ]; then
     echo "$CPU_CHECK" | grep -q 'x86-64-v2' || { echo "CPU does not support x86-64-v2" && return 1; }
@@ -330,8 +330,8 @@ __remove_container() {
   local name="${2//*\//}"
   local arch="${3//*\//}"
   local arch="${arch:-^}"
-  [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $LOG_FILE" && LOG_MESSAGE="true"; }
-  touch "$LOG_FILE"
+  [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $STDOUT_LOG_FILE" && LOG_MESSAGE="true"; }
+  touch "$STDOUT_LOG_FILE"
   if [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
     rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME")"
     containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
