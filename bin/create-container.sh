@@ -220,7 +220,8 @@ __setup_build() {
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-${CONTAINER_NAME}.${CONTAINER_DOMAIN}}"
   RPM_PACKAGES="$(echo "${RPM_PACKAGES}" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-  LOG_FILE="$LOG_DIR/${CONTAINER_PREFIX_NAME}-${SET_VERSION}.log"
+  STDOUT_LOG_FILE="$LOG_DIR/${CONTAINER_PREFIX_NAME}${SET_VERSION}.log"
+  STDERR_LOG_FILE="$LOG_DIR/${CONTAINER_PREFIX_NAME}${SET_VERSION}.err"
   # Create Directories
   [ -d "$LOG_DIR" ] || mkdir -p "$LOG_DIR"
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
@@ -256,7 +257,7 @@ __setup_build() {
     if [ -s "$ret_file" ] || [ -f "$ret_file" ]; then
       true
     else
-      echo "Retrieving $ret_url >$ret_file" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>>"$LOG_FILE" >/dev/null || echo "" >"$ret_file"
+      echo "Retrieving $ret_url >$ret_file" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" || echo "" >"$ret_file"
     fi
     touch "$HOME/.config/rpm-devel/lists/$f.txt"
   done
@@ -265,14 +266,14 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" = "true" ]; then
     if [ "$FORCE_INST" = "true" ]; then
       echo "Deleting existing container: $CONTAINER_NAME"
-      docker rm -f $CONTAINER_NAME 2>>"$LOG_FILE" >/dev/null
+      docker rm -f $CONTAINER_NAME 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE"
       CONTAINER_EXISTS="false"
     else
       echo "$CONTAINER_NAME with image $SET_IMAGE:$SET_VERSION has already been created"
     fi
   else
     echo "Pulling the image $SET_IMAGE:$SET_VERSION for $PLATFORM"
-    docker pull $SET_IMAGE:$SET_VERSION 2>>"$LOG_FILE" >/dev/null || { echo "Failed to pull the image" && return 1; }
+    docker pull $SET_IMAGE:$SET_VERSION 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" || { echo "Failed to pull the image" && return 1; }
     echo "Setting up the container $CONTAINER_NAME"
   fi
   # Create container if it does not exist
@@ -286,6 +287,8 @@ docker run -d \
   --workdir $CONTAINER_HOME_DIR \
   --hostname $CONTAINER_HOSTNAME \
   --env TZ=America/New_York \
+  --volume "$HOME/.ssh:/root/.ssh:z"
+  --volume "$HOME/.gnupg:/root/.gnupg:z"
   --volume "$HOST_RPM_ROOT:$CONTAINER_RPM_ROOT:z" \
   --volume "$HOST_PKG_ROOT:$CONTAINER_PKG_ROOT:z" \
   --volume "$HOST_BUILD_ROOT:$CONTAINER_BUILD_ROOT:z" \
@@ -297,7 +300,7 @@ sleep 10
 EOF
     if [ -f "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" ]; then
       chmod 755 "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
-      eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>>"$LOG_FILE" >/dev/null || __error "Failed to create container"
+      eval "$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" || __error "Failed to create container"
     else
       echo "Failed to create the intall script"
       return 1
@@ -318,8 +321,7 @@ EOF
       __docker_execute curl -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
       __docker_execute sh "/tmp/rpm-dev-tools.sh"
       __docker_execute pkmgr install "/tmp/pkgs.txt"
-    ) 2>>"$LOG_FILE" >/dev/null &
-    disown
+    ) 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" &
     sleep 10
   fi
   if [ "$ENTER_CONTAINER" = "true" ]; then
@@ -342,7 +344,7 @@ __remove_container() {
     containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
     [ -n "$containers" ] || { echo "No containers exist with prefix: $CONTAINER_PREFIX_NAME" && return 1; }
     for c in $containers; do
-      docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
+      docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
     done
     rm -Rf "$home"
   else
@@ -350,7 +352,7 @@ __remove_container() {
     containers="$(docker ps -a | grep "$name" | grep -E "$arch" | awk '{print $NF}')"
     [ -n "$containers" ] || { echo "Search for $name with arch: $arch produced no results" && return 1; }
     for c in $containers; do
-      docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
+      docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
     done
     [ -d "${home//$CONTAINER_ARCH/$arch}" ] && echo "Deleting ${home//$CONTAINER_ARCH/$arch}" && rm -Rf "${home//$CONTAINER_ARCH/$arch}"
   fi
@@ -398,7 +400,7 @@ URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.r
 URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 # Set cpu information
 CPU_CHECK="$(__cpu_v2_check)"
-LOG_DIR="${TMPDIR:-/tmp}"
+LOG_DIR="${TMPDIR:-/tmp}/$CONTAINER_PREFIX_NAME"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
 RPM_BUILD_CONFIG_FILE="settings.conf"
