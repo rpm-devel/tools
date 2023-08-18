@@ -337,7 +337,7 @@ __remove_container() {
   touch "$LOG_FILE"
   if [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
     containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
-    [ -n "$containers" ] || { echo "No containers exist" && return 1; }
+    [ -n "$containers" ] || { echo "No containers exist with prefix: $CONTAINER_PREFIX_NAME" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
     done
@@ -345,7 +345,7 @@ __remove_container() {
   else
     [ -n "$name" ] || { echo "No container name provided" && return 1; }
     containers="$(docker ps -a | grep "$name" | grep -E "$arch" | awk '{print $NF}')"
-    [ -n "$containers" ] || { echo "Searched for $name with arch: $arch - Does not exist" && return 1; }
+    [ -n "$containers" ] || { echo "Search for $name with arch: $arch produced no results" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
     done
