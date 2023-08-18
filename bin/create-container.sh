@@ -333,16 +333,28 @@ __remove_container() {
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $LOG_FILE" && LOG_MESSAGE="true"; }
   touch "$LOG_FILE"
   if [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
+    rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME")"
     containers="$(docker ps -a | grep "$CONTAINER_PREFIX_NAME" | grep -E "$arch" | awk '{print $NF}')"
     [ -n "$containers" ] || { echo "No containers exist with prefix: $CONTAINER_PREFIX_NAME" && return 1; }
+    if [ -n "$rm_file" ]; then
+      for f in $rm_file; do
+        rm -Rf "$rm_file"
+      done
+    fi
     for c in $containers; do
       docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
     done
     rm -Rf "$home"
   else
     [ -n "$name" ] || { echo "No container name provided" && return 1; }
+    rm_file="$(find "$HOME/.config/rpm-devel" -iname "$CONTAINER_PREFIX_NAME" | grep "$name" | grep -E "$arch")"
     containers="$(docker ps -a | grep "$name" | grep -E "$arch" | awk '{print $NF}')"
     [ -n "$containers" ] || { echo "Search for $name with arch: $arch produced no results" && return 1; }
+    if [ -n "$rm_file" ]; then
+      for f in $rm_file; do
+        rm -Rf "$rm_file"
+      done
+    fi
     for c in $containers; do
       docker rm -f $c 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" && echo "Removed $c"
     done
