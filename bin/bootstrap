@@ -55,11 +55,9 @@ URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw
 # Main application
 pkmgr update -q
 pkmgr install -q $RPM_PACKAGES
-cp -Rf "/etc/skel/." "/root"
-cp -Rf "/etc/bashrc" "/root/.bashrc"
-curl -q -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
+cp -Rf "/etc/skel/." "/root/"
 curl -q -LSsf "$URL_RPM_MACROS" -o "/root/.rpmmacros"
-sh "/tmp/rpm-dev-tools.sh"
+sh -c "$(curl -q -LSsf "$URL_TOOLS_INTALLER")"
 pkmgr install "/tmp/pkgs.txt"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # End application
