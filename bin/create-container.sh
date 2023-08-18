@@ -616,7 +616,7 @@ remove)
   fi
   if [ "$REMOVE_ALL_CONTAINERS" = "true" ] || [ -n "$1" ]; then
     REMOVE_CONTAINER="true"
-    __setup_build "$REGISTRY_IMAGE_NAME" "$1" "${2:-*}"
+    __setup_build "$REGISTRY_IMAGE_NAME" "${1:-$CONTAINER_PREFIX_NAME}" "${2:-*}"
     exit
   else
     echo "Usage: $APPNAME remove [ver] [arch] - $APPNAME remove 8 amd64 or $APPNAME remove all"
