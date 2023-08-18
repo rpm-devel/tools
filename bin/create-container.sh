@@ -91,7 +91,7 @@ __help() {
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
   __printf_opts "rpm-build:  - $VERSION"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-  __printf_line "Usage: rpm-build [options] [commands] [linux/amd64,linux/arm64]"
+  __printf_line "Usage: rpm-build [options] [commands] [amd64,arm64]"
   __printf_line "all                - Build all versions for ARM64 and AMD64"
   __printf_line "arm                - Build all versions for ARM64"
   __printf_line "amd                - Build all versions for AMD64"
@@ -151,12 +151,12 @@ EOF
 __list_images() {
   cat <<EOF
 List of images available for arm64
-$REGISTRY_IMAGE_NAME 8 linux/arm64
-$REGISTRY_IMAGE_NAME 9 linux/arm64
+$REGISTRY_IMAGE_NAME 8 arm64
+$REGISTRY_IMAGE_NAME 9 arm64
 List of images available for amd64
-$REGISTRY_IMAGE_NAME 7 linux/amd64
-$REGISTRY_IMAGE_NAME 8 linux/amd64
-$REGISTRY_IMAGE_NAME 9 linux/amd64
+$REGISTRY_IMAGE_NAME 7 amd64
+$REGISTRY_IMAGE_NAME 8 amd64
+$REGISTRY_IMAGE_NAME 9 amd64
 TODO - Add fedora support
 EOF
 }
@@ -236,7 +236,7 @@ __setup_build() {
   fi
   [ -n "$SHOW_LOG_INFO" ] || { echo "logfile is: $LOG_FILE" && SHOW_LOG_INFO="true"; }
   # Check if CPU is supported
-  if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
+  if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "amd64" ]; then
     echo "$CPU_CHECK" | grep -q 'x86-64-v2' || { echo "CPU does not support x86-64-v2" && return 1; }
   fi
   # check if the container is running
@@ -279,7 +279,7 @@ docker run -d \
   --tty \
   --interactive \
   --name $CONTAINER_NAME \
-  --platform $PLATFORM \
+  --platform linux/$PLATFORM \
   --workdir $CONTAINER_HOME_DIR \
   --hostname $CONTAINER_HOSTNAME \
   --env TZ=America/New_York \
@@ -364,7 +364,7 @@ __remove_container() {
 REGISTRY_IMAGE_URL="${REGISTRY_IMAGE_URL:-casjaysdev}"
 REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-rhel}"
 # Default platforms
-PLATFORM="linux/arm64"
+PLATFORM="arm64"
 # Enable specified versions
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
@@ -527,20 +527,20 @@ all)
   shift $#
   ENTER_CONTAINER="false"
   if [ "$ENABLE_VERSION_7" = "yes" ]; then
-    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/arm64"
-    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "amd64"
   else
     echo "Version 7 is disabled"
   fi
   if [ "$ENABLE_VERSION_8" = "yes" ]; then
-    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/arm64"
-    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "amd64"
   else
     echo "Version 8 is disabled"
   fi
   if [ "$ENABLE_VERSION_9" = "yes" ]; then
-    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/arm64"
-    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "amd64"
   else
     echo "Version 9 is disabled"
   fi
@@ -549,17 +549,17 @@ all)
 arm)
   shift $#
   ENTER_CONTAINER="false"
-  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/arm64" || echo "Version 7 is disabled"
-  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/arm64" || echo "Version 8 is disabled"
-  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/arm64" || echo "Version 9 is disabled"
+  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "arm64" || echo "Version 7 is disabled"
+  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "arm64" || echo "Version 8 is disabled"
+  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "arm64" || echo "Version 9 is disabled"
   ;;
 
 amd)
   shift $#
   ENTER_CONTAINER="false"
-  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/amd64" || echo "Version 7 is disabled"
-  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/amd64" || echo "Version 8 is disabled"
-  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/amd64" || echo "Version 9 is disabled"
+  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "amd64" || echo "Version 7 is disabled"
+  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "amd64" || echo "Version 8 is disabled"
+  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "amd64" || echo "Version 9 is disabled"
   ;;
 
 7)
@@ -568,8 +568,8 @@ amd)
   if [ -n "$1" ]; then
     __setup_build "$REGISTRY_IMAGE_NAME" "7" "${1:-$PLATFORM}"
   else
-    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/arm64"
-    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "amd64"
   fi
   exit
   ;;
@@ -580,8 +580,8 @@ amd)
   if [ -n "$1" ]; then
     __setup_build "$REGISTRY_IMAGE_NAME" "8" "${1:-$PLATFORM}"
   else
-    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/arm64"
-    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "amd64"
   fi
   exit
   ;;
@@ -592,8 +592,8 @@ amd)
   if [ -n "$1" ]; then
     __setup_build "$REGISTRY_IMAGE_NAME" "9" "${1:-$PLATFORM}"
   else
-    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/arm64"
-    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "amd64"
   fi
   exit
   ;;
@@ -603,18 +603,18 @@ remove)
   [ "$1" = "all" ] && shift 1 && REMOVE_ALL_CONTAINERS="true"
   if [ -n "$1" ]; then
     REMOVE_CONTAINER="true"
-    __setup_build "$REGISTRY_IMAGE_NAME" "$1" "linux/${2:-*}"
+    __setup_build "$REGISTRY_IMAGE_NAME" "$1" "${2:-*}"
     exit
   else
     echo "Usage: $APPNAME remove [ver] [arch] - $APPNAME remove 8 amd64 or $APPNAME remove all"
-    __list_images | sed "s|casjaysdev/||g;s|linux/||g"
+    __list_images | sed "s|casjaysdev/||g;s|||g"
     exit 1
   fi
   ;;
 
 *)
   if [ $# -eq 0 ]; then
-    printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $REGISTRY_IMAGE_NAME 8 linux/amd64"
+    printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $REGISTRY_IMAGE_NAME 8 amd64"
     __list_images
     exit 1
   else
