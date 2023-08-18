@@ -217,7 +217,7 @@ __setup_build() {
   fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
     { [ "$1" = "all" ] || [ -z "$1" ]; } && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
-    __remove_container "$CONTAINER_NAME" "$HOST_DOCKER_HOME" $SET_VERSION
+    __remove_container "$CONTAINER_NAME" "$SET_IMAGE" $SET_VERSION
     return $?
   fi
   # Create Directories
@@ -577,7 +577,7 @@ remove)
   shift 1
   if [ -n "$1" ]; then
     REMOVE_CONTAINER="true"
-    __setup_build "$@"
+    __setup_build "$CONTAINER_IMAGE" "$1" "linux/${2:-*}"
     exit
   else
     echo "Usage: $APPNAME remove [all,image] [arch] - $APPNAME remove $CONTAINER_IMAGE [amd64]"
