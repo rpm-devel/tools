@@ -198,7 +198,7 @@ __setup_build() {
   statusCode=0
   # Set image version and platform
   SET_IMAGE="$1"
-  SET_VERSION="${2:-latest}"
+  SET_VERSION="${2:-9}"
   PLATFORM="${3:-$PLATFORM}"
   LOG_MESSAGE="${LOG_MESSAGE:-false}"
   # get arch from platform variable
@@ -221,7 +221,7 @@ __setup_build() {
   fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
     { [ "$1" = "all" ] || [ -z "$1" ]; } && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
-    __remove_container "$HOST_DOCKER_HOME" "$CONTAINER_NAME" $PLATFORM
+    __remove_container "$HOST_DOCKER_HOME" "$CONTAINER_NAME" "$PLATFORM"
     return $?
   fi
   [ -n "$SHOW_LOG_INFO" ] || { echo "logfile is: $LOG_FILE" && SHOW_LOG_INFO="true"; }
@@ -592,7 +592,7 @@ remove)
   shift 1
   if [ -n "$1" ]; then
     REMOVE_CONTAINER="true"
-    __setup_build "$CONTAINER_IMAGE" "$1" "linux/${2:-*}"
+    __setup_build "$CONTAINER_IMAGE" "${1//$CONTAINER_IMAGE/}" "linux/${2:-*}"
     exit
   else
     echo "Usage: $APPNAME remove [all,image] [ver] [arch] - $APPNAME remove $CONTAINER_IMAGE [8] [amd64]"
