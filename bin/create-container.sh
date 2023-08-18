@@ -586,7 +586,7 @@ remove)
     exit
   else
     echo "Usage: $APPNAME remove [all,image] [arch] - $APPNAME remove $CONTAINER_IMAGE [amd64]"
-    __list_images | sed 's|linux/||g'
+    __list_images | sed "s|$CONTAINER_IMAGE ||g;s|linux/||g"
     exit 1
   fi
   ;;
