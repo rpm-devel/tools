@@ -274,7 +274,7 @@ EOF
   docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Created ' && { echo "$CONTAINER_NAME has been created, however it failed to start" && statusCode=3; }
   [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
-    echo "Executing post install scripts in the background: This may take awhile!!"
+    echo "$CONTAINER_NAME is executing post install scripts in the background: This may take awhile!!"
     (
       __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
       __docker_execute -q pkmgr update -q
