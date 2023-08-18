@@ -332,7 +332,7 @@ __remove_container() {
 
   elif [ -n "$name" ]; then
     containers="$(docker ps -aq | grep -E "$name|$CONTAINER_NAME" | grep -E "$arch")"
-    [ -n "$containers" ] || { echo "No containers exist" && return 1; }
+    [ -n "$containers" ] || { echo "No containers exist" && echo "Searched for $name/$CONTAINER_NAME $arch" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
     done
