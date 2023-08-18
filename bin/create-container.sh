@@ -183,7 +183,8 @@ __docker_execute() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __setup_build() {
-  local statusCode=0
+  statusCode=0
+  LOG_MESSAGE=""
   # Set image version and platform
   SET_IMAGE="$1"
   SET_VERSION="${2:-latest}"
@@ -198,6 +199,7 @@ __setup_build() {
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
   # Create Directories
+  [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$CONTAINER_NAME.log" && LOG_MESSAGE="true"; }
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if CPU is supported
@@ -215,7 +217,9 @@ __setup_build() {
     ret_file="$HOME/.config/rpm-devel/lists/$f.txt"
     ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
     [ -d "$ret_file" ] && rm -Rf "$ret_file"
-    if [ ! -s "$ret_file" ] || [ ! -f "$ret_file" ]; then
+    if [ -s "$ret_file" ] || [ -f "$ret_file" ]; then
+      true
+    else
       echo "Retrieving $ret_url >$ret_file" && curl -q -LSsf "$ret_url" -o "$ret_file" 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null || echo "" >"$ret_file"
     fi
     touch "$HOME/.config/rpm-devel/lists/$f.txt"
@@ -270,7 +274,7 @@ EOF
   docker ps 2>&1 | grep "$CONTAINER_NAME" | grep -qi ' Created ' && { echo "$CONTAINER_NAME has been created, however it failed to start" && statusCode=3; }
   [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
-    echo "Starting post install scripts and out putting to: $tmp_dir/$CONTAINER_NAME.log"
+    echo "Executing post install scripts in the background"
     (
       __docker_execute -q cp -Rf "/etc/bashrc" "/root/.bashrc"
       __docker_execute -q pkmgr update -q
