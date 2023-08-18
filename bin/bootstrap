@@ -58,7 +58,7 @@ pkmgr update
 pkmgr install $RPM_PACKAGES
 cp -Rf "/etc/skel/." "/root/"
 curl -q -LSsf "$URL_RPM_MACROS" -o "/root/.rpmmacros"
-sh -c "$(curl -q -LSsf "$URL_TOOLS_INTALLER")"
+curl -q -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/bootstrap" && chmod 755 "/tmp/bootstrap" && sh -c "/tmp/bootstrap"
 pkmgr install "/tmp/pkgs.txt"
 rm -Rf "/tmp/bootstrap.pid"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
