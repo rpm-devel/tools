@@ -610,8 +610,11 @@ amd)
 
 remove)
   shift 1
-  [ "$1" = "all" ] && shift 1 && REMOVE_ALL_CONTAINERS="true"
-  if [ -n "$1" ]; then
+  if [ "$1" = "all" ]; then
+    shift 1
+    REMOVE_ALL_CONTAINERS="true"
+  fi
+  if [ "$REMOVE_ALL_CONTAINERS" = "true" ] || [ -n "$1" ]; then
     REMOVE_CONTAINER="true"
     __setup_build "$REGISTRY_IMAGE_NAME" "$1" "${2:-*}"
     exit
