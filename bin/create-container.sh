@@ -336,6 +336,7 @@ __remove_container() {
     done
     [ -d "${home//$CONTAINER_ARCH/$arch}" ] && echo "Deleting ${home//$CONTAINER_ARCH/$arch}" && rm -Rf "${home//$CONTAINER_ARCH/$arch}"
   else
+    echo "Searched for $name/$CONTAINER_NAME $arch"
     echo "The container $name does not exist"
   fi
 }
