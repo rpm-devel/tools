@@ -111,6 +111,9 @@ __help() {
 }
 __gen_config() {
   cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+# Docker Registry user/org url
+REGISTRY_IMAGE_URL="${REGISTRY_IMAGE_URL:-casjaysdev}"
+REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-rhel}"
 # Enable specified versions
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
@@ -221,7 +224,9 @@ __setup_build() {
     exit 1
   fi
   if [ "$REMOVE_CONTAINER" = "true" ]; then
-    { [ "$1" = "all" ] || [ -z "$1" ]; } && CONTAINER_NAME="all" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
+    if [ -z "$1" ] || [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
+      CONTAINER_NAME="" PLATFORM="" && HOST_DOCKER_HOME="$DOCKER_HOME_DIR"
+    fi
     __remove_container "$HOST_DOCKER_HOME" "$CONTAINER_NAME" "$PLATFORM"
     return $?
   fi
@@ -324,27 +329,23 @@ __remove_container() {
   local name="${2//*\//}"
   local arch="${3//*\//}"
   local arch="${arch:-^}"
-  [ -n "$name" ] || { echo "No container name provided" && return 1; }
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $LOG_FILE" && LOG_MESSAGE="true"; }
   touch "$LOG_FILE"
-  if [ "$name" = "all" ]; then
-    containers="$(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd64|arm64')"
+  if [ "$REMOVE_ALL_CONTAINERS" = "true" ]; then
+    containers="$(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd|arm')"
     [ -n "$containers" ] || { echo "No containers exist" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
     done
     rm -Rf "$home"
-
-  elif [ -n "$name" ]; then
+  else
+    [ -n "$name" ] || { echo "No container name provided" && return 1; }
     containers="$(docker ps -aq | grep "$name" | grep -E "$arch")"
     [ -n "$containers" ] || { echo "Searched for $name with arch: $arch - Does not exist" && return 1; }
     for c in $containers; do
       docker rm -f $c 2>>"$LOG_FILE" >/dev/null && echo "Removed $c"
     done
     [ -d "${home//$CONTAINER_ARCH/$arch}" ] && echo "Deleting ${home//$CONTAINER_ARCH/$arch}" && rm -Rf "${home//$CONTAINER_ARCH/$arch}"
-  else
-    echo "Searched for with arch: $arch - Does not exist"
-    return 1
   fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -355,6 +356,10 @@ __remove_container() {
 #type -P sh &>/dev/null || exit 3       # exit 3 if not found
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set variables
+# Registry user/org url
+REGISTRY_IMAGE_URL="${REGISTRY_IMAGE_URL:-casjaysdev}"
+REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-rhel}"
+# Default platforms
 PLATFORM="linux/arm64"
 # Enable specified versions
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
@@ -485,7 +490,7 @@ while :; do
     ENTER_CONTAINER="true"
     ;;
   --image)
-    CONTAINER_IMAGE="$2"
+    REGISTRY_IMAGE_NAME="$2"
     shift 2
     ;;
   --)
@@ -509,7 +514,7 @@ if [ -z "$REMOVE_CONTAINER" ] && [ "$1" != "remove" ]; then
   fi
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-CONTAINER_IMAGE="${CONTAINER_IMAGE:-casjaysdev/rhel}"
+REGISTRY_IMAGE_NAME="$REGISTRY_IMAGE_URL/${REGISTRY_IMAGE_NAME:-rhel}"
 [ -d "$RPM_BUILD_CONFIG_DIR/containers" ] || mkdir -p "$RPM_BUILD_CONFIG_DIR/containers"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main application
@@ -518,20 +523,20 @@ all)
   shift $#
   ENTER_CONTAINER="false"
   if [ "$ENABLE_VERSION_7" = "yes" ]; then
-    __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
-    __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/amd64"
   else
     echo "Version 7 is disabled"
   fi
   if [ "$ENABLE_VERSION_8" = "yes" ]; then
-    __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
-    __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/amd64"
   else
     echo "Version 8 is disabled"
   fi
   if [ "$ENABLE_VERSION_9" = "yes" ]; then
-    __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
-    __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/amd64"
   else
     echo "Version 9 is disabled"
   fi
@@ -540,27 +545,27 @@ all)
 arm)
   shift $#
   ENTER_CONTAINER="false"
-  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64" || echo "Version 7 is disabled"
-  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64" || echo "Version 8 is disabled"
-  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64" || echo "Version 9 is disabled"
+  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/arm64" || echo "Version 7 is disabled"
+  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/arm64" || echo "Version 8 is disabled"
+  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/arm64" || echo "Version 9 is disabled"
   ;;
 
 amd)
   shift $#
   ENTER_CONTAINER="false"
-  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64" || echo "Version 7 is disabled"
-  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64" || echo "Version 8 is disabled"
-  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64" || echo "Version 9 is disabled"
+  [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/amd64" || echo "Version 7 is disabled"
+  [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/amd64" || echo "Version 8 is disabled"
+  [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/amd64" || echo "Version 9 is disabled"
   ;;
 
 7)
   shift 1
   ENTER_CONTAINER="false"
   if [ -n "$1" ]; then
-    __setup_build "$CONTAINER_IMAGE" "7" "${1:-$PLATFORM}"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "${1:-$PLATFORM}"
   else
-    __setup_build "$CONTAINER_IMAGE" "7" "linux/arm64"
-    __setup_build "$CONTAINER_IMAGE" "7" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "7" "linux/amd64"
   fi
   exit
   ;;
@@ -569,10 +574,10 @@ amd)
   shift 1
   ENTER_CONTAINER="false"
   if [ -n "$1" ]; then
-    __setup_build "$CONTAINER_IMAGE" "8" "${1:-$PLATFORM}"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "${1:-$PLATFORM}"
   else
-    __setup_build "$CONTAINER_IMAGE" "8" "linux/arm64"
-    __setup_build "$CONTAINER_IMAGE" "8" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "8" "linux/amd64"
   fi
   exit
   ;;
@@ -581,30 +586,31 @@ amd)
   shift 1
   ENTER_CONTAINER="false"
   if [ -n "$1" ]; then
-    __setup_build "$CONTAINER_IMAGE" "9" "${1:-$PLATFORM}"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "${1:-$PLATFORM}"
   else
-    __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
-    __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "9" "linux/amd64"
   fi
   exit
   ;;
 
 remove)
   shift 1
+  [ "$1" = "all" ] && shift 1 && REMOVE_ALL_CONTAINERS="true"
   if [ -n "$1" ]; then
     REMOVE_CONTAINER="true"
-    __setup_build "$CONTAINER_IMAGE" "$1" "linux/${2:-*}"
+    __setup_build "$REGISTRY_IMAGE_NAME" "$1" "linux/${2:-*}"
     exit
   else
     echo "Usage: $APPNAME remove [ver] [arch] - $APPNAME remove 8 amd64 or $APPNAME remove all"
-    __list_images | awk -F ' ' '{print $1" "$2}' | sed "s|linux/||g"
+    __list_images | sed "s|casjaysdev/||g;s|linux/||g"
     exit 1
   fi
   ;;
 
 *)
   if [ $# -eq 0 ]; then
-    printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $CONTAINER_IMAGE 8 linux/amd64"
+    printf 'Usage:\n%s\n%s\n' "$APPNAME [$ARRAY]" "$APPNAME $REGISTRY_IMAGE_NAME 8 linux/amd64"
     __list_images
     exit 1
   else
