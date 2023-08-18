@@ -320,6 +320,7 @@ __remove_container() {
   local arch="${3:-^}"
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$name.log" && LOG_MESSAGE="true"; }
+  touch "$tmp_dir/$name.log"
   if [ "$name" = "all" ]; then
     containers="$(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd64|arm64')"
     [ -n "$containers" ] || { echo "No containers exist" && return 1; }
