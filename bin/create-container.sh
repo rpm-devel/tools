@@ -564,7 +564,7 @@ amd)
 remove)
   RM_OPTS="${*:-all}"
   REMOVE_CONTAINER="true"
-  __setup_build "${RM_OPTS[@]}"
+  __setup_build $RM_OPTS
   exit
   ;;
 
