@@ -331,6 +331,7 @@ __remove_container() {
 #type -P sh &>/dev/null || exit 3       # exit 3 if not found
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set variables
+PLATFORM="linux/arm64"
 # Enable specified versions
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
@@ -558,6 +559,12 @@ amd)
     __setup_build "$CONTAINER_IMAGE" "9" "linux/arm64"
     __setup_build "$CONTAINER_IMAGE" "9" "linux/amd64"
   fi
+  exit
+  ;;
+
+remove)
+  RM_OPTS="${*:-$CONTAINER_IMAGE $PLATFORM}"
+  __setup_build remove "${RM_OPTS[@]}"
   exit
   ;;
 
