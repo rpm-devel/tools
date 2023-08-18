@@ -281,7 +281,8 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" != "true" ]; then
     cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
 docker run -d \
-  -it --tty \
+  -it \
+  --tty \
   --privileged \
   --name $CONTAINER_NAME \
   --platform $PLATFORM \
