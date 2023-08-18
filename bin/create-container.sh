@@ -18,6 +18,12 @@
 # @@sudo/root        :  no
 # @@Template         :  shell/sh
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# shell check options
+# shellcheck disable=SC2317
+# shellcheck disable=SC2120
+# shellcheck disable=SC2155
+# shellcheck disable=SC2199
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 APPNAME="create-container"
 VERSION="202302221946-git"
 HOME="${USER_HOME:-$HOME}"

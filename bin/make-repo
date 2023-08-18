@@ -1,17 +1,28 @@
 #!/usr/bin/env bash
+# shellcheck shell=bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-##@Version       : 202202011344-git
-# @Author        : Jason Hempstead
-# @Contact       : jason@casjaysdev.pro
-# @License       : WTFPL
-# @ReadME        : make-repo --help
-# @Copyright     : Copyright: (c) 2022 Jason Hempstead, Casjays Developments
-# @Created       : Tuesday, Feb 01, 2022 13:44 EST
-# @File          : make-repo
-# @Description   : RPM release script
-# @TODO          :
-# @Other         :
-# @Resource      :
+##@Version           :  202308172028-git
+# @@Author           :  Jason Hempstead
+# @@Contact          :  git-admin@casjaysdev.pro
+# @@License          :  LICENSE.md
+# @@ReadME           :  make-repo --help
+# @@Copyright        :  Copyright: (c) 2023 Jason Hempstead, Casjays Developments
+# @@Created          :  Thursday, Aug 17, 2023 20:28 EDT
+# @@File             :  make-repo
+# @@Description      :  RPM release script
+# @@Changelog        :  newScript
+# @@TODO             :  Refactor code
+# @@Other            :
+# @@Resource         :
+# @@Terminal App     :  no
+# @@sudo/root        :  no
+# @@Template         :  bash/system
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# shell check options
+# shellcheck disable=SC2317
+# shellcheck disable=SC2120
+# shellcheck disable=SC2155
+# shellcheck disable=SC2199
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 APPNAME="make-repo"
 VERSION="202202011344-git"
@@ -28,109 +39,130 @@ if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
   exit $?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[ -n "$1" ] && ARCH="$1"
-[ -n "$2" ] && VERSION="$2"
+[ -n "$1" ] && VERSION="$1"
+[ -n "$2" ] && ARCH="$2"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-VERNAME="el"
 DISTRO="RHEL"
 ARCH="${ARCH:-$(uname -m)}"
+VERNAME="${VERNAME:-$(grep -s '%_osver ' "$HOME/.rpmmacros" | awk -F ' ' '{print $2}' | sed 's|%.*||g' | grep '^' || echo "el")}"
 VERNUM="${VERSION:-$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Local FTP server address
-FTPDOM="ftp.casjaysdev.pro"
-FTPDIR="/var/ftp/pub/Casjay/repo"
+FTP_DOMAIN="ftp.casjaysdev.pro"
+FTP_DIR="/var/ftp/pub/Casjay/repo"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sourceforge Web urls
-SFWEB="web.sourceforge.net"
-SFFRS="frs.sourceforge.net"
+SOURCEFORGE_WEB_URL="web.sourceforge.net"
+SOURCEFORGE_FRS_URL="frs.sourceforge.net"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Developnment project name
-SFPROJ="rpm-devel"
+SOURCEFORGE_PROJECT_NAME="rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Usernames
-SFUSER="${SFUSER:-}"
-LOCUSER="${LOCUSER:-root}"
+FTP_USER="${FTP_USER:-root}"
+SOURCEFORGE_USER="${SOURCEFORGE_USER:-}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
-SRCDIR="$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"
-TARGETDIR="$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
+HOST_SRPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/SRPMS"
+HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/$ARCH"
+HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}/$DISTRO/$VERNAME$VERNUM/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
-RPM_BUILD_CONFIG_FILE="$APPNAME-settings.conf"
+RPM_BUILD_CONFIG_FILE="settings.conf"
 RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # bring in user config
-[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" || __gen_config &>/dev/null
+[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if [ -z "$FTP_USER" ]; then
+  FTP_ERROR="true"
+  echo "FTP USER is net set"
+fi
+if ! curl -q -LSsf -I "ftp://$FTP_DOMAIN" &>/dev/null; then
+  FTP_ERROR="true"
+  echo "Problem connecting to $FTP_DOMAIN"
+fi
+if [ -z "$SOURCEFORGE_USER" ]; then
+  SOURCEFORGE_ERROR="true"
+  echo "The variable SOURCEFORGE_USER needs to be set to your sourceforge user"
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean from previous builds
 echo "Cleaning Previous builds"
-rm -Rf "$TARGETDIR"/{srpms,rpms,debug}
+rm -Rf "$HOST_PKG_ROOT/rpms"/*
+rm -Rf "$HOST_PKG_ROOT/debug"/*
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Make Directories
 echo "Creating Directories"
-mkdir -p "$TARGETDIR"/{addons,extras,srpms,debug,rpms}
+mkdir -p "$HOST_SRPM_ROOT"
+mkdir -p "$HOST_PKG_ROOT/rpms"
+mkdir -p "$HOST_PKG_ROOT/debug"
+mkdir -p "$HOST_PKG_ROOT/addons"
+mkdir -p "$HOST_PKG_ROOT/extras"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
-rpm --addsign --quiet "$SRCDIR"/*/*.rpm "$SRCDIR"/*/*/*.rpm
+rpm --addsign --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
 echo "Moving SRPMS"
-rsync --no-motd -aqhP --delete "$SRCDIR"/srpm/*.rpm "$TARGETDIR/srpms/"
+rsync --no-motd -aqhP --delete "$HOST_RPM_ROOT"/srpm/*.rpm "$HOST_SRPM_ROOT/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
-rsync --no-motd -aqhP "$SRCDIR"/rpms/*/*debugsource*.rpm "$TARGETDIR/debug/"
-rsync --no-motd -aqhP "$SRCDIR"/rpms/*/*debuginfo*.rpm "$TARGETDIR/debug/"
+rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debugsource*.rpm "$HOST_PKG_ROOT/debug/"
+rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debuginfo*.rpm "$HOST_PKG_ROOT/debug/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving RPMS"
-rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$SRCDIR"/rpms/*/*.rpm "$TARGETDIR/rpms/"
+rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$HOST_RPM_ROOT"/rpms/*/*.rpm "$HOST_PKG_ROOT/rpms/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create repos
-if [ -d "$TARGETDIR/addons" ]; then
-  echo "Generating Addons REPO"
-  cd "$TARGETDIR/addons" && createrepo -q -d ./
-fi
-if [ -d "$TARGETDIR/extras" ]; then
-  echo "Generating Extras REPO"
-  cd "$TARGETDIR/extras" && createrepo -q -d ./
-fi
-if [ -d "$TARGETDIR/srpms" ]; then
+if [ -d "$HOST_SRPM_ROOT" ]; then
   echo "Generating SRPMS REPO"
-  cd "$TARGETDIR/srpms" && createrepo -q -d ./
+  cd "$HOST_SRPM_ROOT" && createrepo -q -d ./
 fi
-if [ -d "$TARGETDIR/debug" ]; then
+if [ -d "$HOST_PKG_ROOT/addons" ]; then
+  echo "Generating Addons REPO"
+  cd "$HOST_PKG_ROOT/addons" && createrepo -q -d ./
+fi
+if [ -d "$HOST_PKG_ROOT/extras" ]; then
+  echo "Generating Extras REPO"
+  cd "$HOST_PKG_ROOT/extras" && createrepo -q -d ./
+fi
+if [ -d "$HOST_PKG_ROOT/debug" ]; then
   echo "Generating DEBUG REPO"
-  cd "$TARGETDIR/debug" && createrepo -q -d ./
+  cd "$HOST_PKG_ROOT/debug" && createrepo -q -d ./
 fi
-if [ -d "$TARGETDIR/rpms" ]; then
+if [ -d "$HOST_PKG_ROOT/rpms" ]; then
   echo "Generating RPMS REPO"
-  cd "$TARGETDIR/rpms" && createrepo -q -d ./
+  cd "$HOST_PKG_ROOT/rpms" && createrepo -q -d ./
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to locale FTP Server
-if [ -n "$LOCUSER" ] && curl -q -LSsf -I "ftp://$FTPDOM" &>/dev/null; then
-  echo "Sending Locally: $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$ARCH/$VERNUM"
-  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$VERNUM/$ARCH
-  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$TARGETDIR"/* $LOCUSER@$FTPDOM:$FTPDIR/$DISTRO/$VERNUM/$ARCH
+if [ "$FTP_ERROR" != "true" ]; then
+  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$ARCH/SRPMS"
+  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp "$HOST_SRPM_ROOT""/* $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS/"
+  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$ARCH/$VERNUM"
+  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/"
+  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
-if [ -z "$SFUSER" ]; then
-  echo "The variable SFUSER need to be set to your sourceforge user"
-else
-  echo "$SFUSER is Sending to website: /home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$VERNUM/$ARCH"
-  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$VERNUM/$ARCH
-  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFWEB:/home/project-web/$SFPROJ/htdocs/repo/$DISTRO/$VERNUM/$ARCH
+if [ "$SOURCEFORGE_ERROR" != "true" ]; then
+  echo "$SOURCEFORGE_USER is Sending to website: /home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS"
+  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS/"
+  echo "$SOURCEFORGE_USER is Sending to website: /home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH"
+  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/"
+  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
-if [ -z "$SFUSER" ]; then
-  echo "The variable SFUSER need to be set to your sourceforge user"
-else
-  echo "$SFUSER is Sending to FRS site: /home/frs/project/$SFPROJ/$DISTRO/$VERNUM/$ARCH"
-  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$VERNUM/$ARCH
-  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$TARGETDIR"/* $SFUSER@$SFFRS:/home/frs/project/$SFPROJ/$DISTRO/$VERNUM/$ARCH
+if [ "$SOURCEFORGE_ERROR" != "true" ]; then
+  echo "$SOURCEFORGE_USER is Sending to FRS site: /home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/SRPMS"
+  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* $SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/
+  echo "$SOURCEFORGE_USER is Sending to FRS site: /home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH"
+  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/"
+  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "The script has completed"
