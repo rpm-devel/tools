@@ -136,6 +136,9 @@ CONTAINER_PKG_ROOT="${CONTAINER_PKG_ROOT:-$CONTAINER_HOME_DIR/Documents/builds/s
 CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
 # Package list
 RPM_PACKAGES="$RPM_PACKAGES"
+# url paths
+URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.rpmmacros}"
+URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 
 EOF
   [ -f "RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" || return 1
@@ -280,7 +283,8 @@ EOF
       __docker_execute -q pkmgr update -q
       __docker_execute -q pkmgr install -q $RPM_PACKAGES
       __docker_execute -q pkmgr clean all
-      __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
+      __docker_execute curl -q -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
+      __docker_execute curl -q -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
       __docker_execute sh "/tmp/rpm-dev-tools.sh"
       __docker_execute pkmgr install "/tmp/pkgs.txt"
     ) 2>>"$tmp_dir/$CONTAINER_NAME.log" >/dev/null &
@@ -328,6 +332,9 @@ CONTAINER_DOMAIN="${CONTAINER_DOMAIN:-build.casjaysdev.pro}"
 # Package list
 RPM_PACKAGES="$RPM_PACKAGES git curl wget sudo bash pinentry rpm-devel "
 RPM_PACKAGES+="rpm-sign rpmrebuild rpm-build bash bash-completion yum-utils "
+# Urls
+URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.rpmmacros}"
+URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 # Set cpu information
 CPU_CHECK="$(__cpu_v2_check)"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
