@@ -209,17 +209,17 @@ __setup_build() {
   PLATFORM="${3:-$PLATFORM}"
   LOG_MESSAGE="${LOG_MESSAGE:-false}"
   # get arch from platform variable
-  CONTAINER_ARCH="$(echo "$PLATFORM" | awk -F '/' '{print $2}')"
+  CONTAINER_ARCH="$(echo "${PLATFORM}" | awk -F '/' '{print $2}')"
   # Docker rootfs location
-  HOST_DOCKER_HOME="$DOCKER_HOME_DIR/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
+  HOST_DOCKER_HOME="${DOCKER_HOME_DIR}/${SET_IMAGE}${SET_VERSION}/${CONTAINER_ARCH}"
   # Set the container name
-  CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
+  CONTAINER_NAME="${CONTAINER_PREFIX_NAME}${SET_VERSION}-${CONTAINER_ARCH}"
   # Set the container hostname
-  CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
-  RPM_PACKAGES="$(echo "$RPM_PACKAGES" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-  LOG_FILE="$TEMP_DIR/${CONTAINER_NAME//$-$CONTAINER_ARCH/}.log"
+  CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-${CONTAINER_NAME}.${CONTAINER_DOMAIN}}"
+  RPM_PACKAGES="$(echo "${RPM_PACKAGES}" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+  LOG_FILE="$LOG_DIR/${CONTAINER_PREFIX_NAME}-${SET_VERSION}.log"
   # Create Directories
-  [ -d "$TEMP_DIR" ] || mkdir -p "$TEMP_DIR"
+  [ -d "$LOG_DIR" ] || mkdir -p "$LOG_DIR"
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
   [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if image is set
@@ -395,7 +395,7 @@ URL_RPM_MACROS="${URL_RPM_MACROS:-https://github.com/rpm-devel/tools/raw/main/.r
 URL_TOOLS_INTALLER="${URL_TOOLS_INTALLER:-https://github.com/rpm-devel/tools/raw/main/install.sh}"
 # Set cpu information
 CPU_CHECK="$(__cpu_v2_check)"
-TEMP_DIR="${TMPDIR:-/tmp}"
+LOG_DIR="${TMPDIR:-/tmp}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
 RPM_BUILD_CONFIG_FILE="settings.conf"
