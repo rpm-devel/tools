@@ -274,7 +274,7 @@ EOF
       __docker_execute -q pkmgr install -q $RPM_PACKAGES
       __docker_execute -q pkmgr clean all
       __docker_execute curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh" -o "/tmp/rpm-dev-tools.sh"
-    ) 2>"/tmp/$CONTAINER_NAME.log" >/dev/null &
+    ) 2>>"/tmp/$CONTAINER_NAME.log" >/dev/null &
     disown
     sleep 10
   fi
