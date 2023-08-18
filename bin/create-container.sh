@@ -210,6 +210,10 @@ __setup_build() {
   CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-$CONTAINER_NAME.$CONTAINER_DOMAIN}"
+  # Create Directories
+  [ -d "$tmp_dir" ] || mkdir -p "$tmp_dir"
+  [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
+  [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if image is set
   if [ -z "$SET_IMAGE" ]; then
     echo "Usage: $APPNAME [imageName] [version] [platform]"
@@ -220,9 +224,6 @@ __setup_build() {
     __remove_container "$HOST_DOCKER_HOME" "$SET_IMAGE" $PLATFORM
     return $?
   fi
-  # Create Directories
-  [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
-  [ -d "$HOME/.config/rpm-devel/scripts" ] || mkdir -p "$HOME/.config/rpm-devel/scripts"
   # Check if CPU is supported
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "linux/amd64" ]; then
     echo "$CPU_CHECK" | grep -q 'x86-64-v2' || { echo "CPU does not support x86-64-v2" && return 1; }
