@@ -287,8 +287,8 @@ docker run -d \
   --workdir $CONTAINER_HOME_DIR \
   --hostname $CONTAINER_HOSTNAME \
   --env TZ=America/New_York \
-  --volume "$HOME/.ssh:/root/.ssh:z"
-  --volume "$HOME/.gnupg:/root/.gnupg:z"
+  --volume "$HOME/.ssh:/root/.ssh:z" \
+  --volume "$HOME/.gnupg:/root/.gnupg:z" \
   --volume "$HOST_RPM_ROOT:$CONTAINER_RPM_ROOT:z" \
   --volume "$HOST_PKG_ROOT:$CONTAINER_PKG_ROOT:z" \
   --volume "$HOST_BUILD_ROOT:$CONTAINER_BUILD_ROOT:z" \
@@ -317,8 +317,8 @@ EOF
       __docker_execute pkmgr install -q $RPM_PACKAGES
       __docker_execute cp -Rf "/etc/skel/." "/root"
       __docker_execute cp -Rf "/etc/bashrc" "/root/.bashrc"
-      __docker_execute curl -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
-      __docker_execute curl -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
+      __docker_execute curl -q -LSsf "$URL_TOOLS_INTALLER" -o "/tmp/rpm-dev-tools.sh"
+      __docker_execute curl -q -LSsf "$URL_RPM_MACROS" -o "$CONTAINER_HOME_DIR/.rpmmacros"
       __docker_execute sh "/tmp/rpm-dev-tools.sh"
       __docker_execute pkmgr install "/tmp/pkgs.txt"
     ) 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" &
