@@ -113,7 +113,7 @@ __gen_config() {
   cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
 # Docker Registry user/org url
 REGISTRY_IMAGE_URL="${REGISTRY_IMAGE_URL:-casjaysdev}"
-REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-rhel}"
+REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-almalinux}"
 # Enable specified versions
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
