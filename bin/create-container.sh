@@ -421,6 +421,8 @@ while :; do
   esac
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+clear
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "$(uname -m)" = "x86_64" ]; then
   if __qemu_static_image; then
     echo "Enabling multiarch support"

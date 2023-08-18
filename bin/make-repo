@@ -75,6 +75,8 @@ RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
 # bring in user config
 [ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+clear
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -z "$FTP_USER" ]; then
   FTP_ERROR="true"
   echo "FTP USER is net set"

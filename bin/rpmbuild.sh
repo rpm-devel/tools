@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [ "$1" = "update" ]; then
+clear
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
     bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
     exit $?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-clear
+[ -n "$1" ] && VERSION="$1"
+[ -n "$2" ] && ARCH="$2"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-VERNAME="el"
 DISTRO="RHEL"
-ARCH="$(uname -m)"
-VERNUM="$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")"
+ARCH="${ARCH:-$(uname -m)}"
+VERNAME="${VERNAME:-$(grep -s '%_osver ' "$HOME/.rpmmacros" | awk -F ' ' '{print $2}' | sed 's|%.*||g' | grep '^' || echo "el")}"
+VERNUM="${VERSION:-$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SPEC_DIR="$HOME/rpmbuild"
 LOG_DIR="$HOME/Documents/logs"
 BUILDIR="$HOME/.local/tmp/BUILDROOT/BUILD"
 BUILDROOT="$HOME/.local/tmp/BUILDROOT/BUILDROOT"
-SRCDIR="$HOME/Documents/builds/$DISTRO/$VERNAME$VERNUM/$ARCH"
+SRCDIR="$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"
 TARGETDIR="$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 export QA_RPATHS="${QA_RPATHS:-$((0x0001 | 0x0010))}"
@@ -33,7 +36,8 @@ find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
 find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
-for i in $(cat "$LOG_DIR/specs.txt"); do
+spec_list="$(cat "$LOG_DIR/specs.txt")"
+for i in $spec_list; do
     spec_name="$(basename "${i//.spec/}")"
     echo "Building $spec_name package on $(date +'%Y-%m-%d at %H:%M')" | tee -a "$LOG_DIR/$spec_name/errors.txt" "$LOG_DIR/$spec_name/build.txt"
     mkdir -p "$LOG_DIR/$spec_name"
@@ -57,7 +61,7 @@ done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign rpm packages
 find "$SRCDIR/" -iname "*.rpm" >"$LOG_DIR/pkgs.txt"
-rpmsign --addsign $(cat "$LOG_DIR/pkgs.txt")
+rpmsign --addsign "$(<"$LOG_DIR/pkgs.txt")"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 exit
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
