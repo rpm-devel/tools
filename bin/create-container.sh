@@ -215,14 +215,14 @@ __setup_build() {
   fi
   CONTAINER_ARCH="$(echo "${PLATFORM}" | awk -F '/' '{print $2}')"
   # Docker rootfs location
-  HOST_DOCKER_HOME="${DOCKER_HOME_DIR}/${SET_IMAGE}${SET_VERSION}/${CONTAINER_ARCH}"
+  HOST_DOCKER_HOME="$DOCKER_HOME_DIR/$SET_IMAGE$SET_VERSION/$CONTAINER_ARCH"
   # Set the container name
-  CONTAINER_NAME="${CONTAINER_PREFIX_NAME}${SET_VERSION}-${CONTAINER_ARCH}"
+  CONTAINER_NAME="$CONTAINER_PREFIX_NAME$SET_VERSION-$CONTAINER_ARCH"
   # Set the container hostname
   CONTAINER_HOSTNAME="${CONTAINER_HOSTNAME:-${CONTAINER_NAME}.${CONTAINER_DOMAIN}}"
-  RPM_PACKAGES="$(echo "${RPM_PACKAGES}" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-  STDOUT_LOG_FILE="$LOG_DIR/${CONTAINER_PREFIX_NAME}${SET_VERSION}.log"
-  STDERR_LOG_FILE="$LOG_DIR/${CONTAINER_PREFIX_NAME}${SET_VERSION}.err"
+  RPM_PACKAGES="$(echo "$RPM_PACKAGES" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+  STDOUT_LOG_FILE="$LOG_DIR/$CONTAINER_PREFIX_NAME$SET_VERSION.log"
+  STDERR_LOG_FILE="$LOG_DIR/$CONTAINER_PREFIX_NAME$SET_VERSION.err"
   # Create Directories
   [ -d "$LOG_DIR" ] || mkdir -p "$LOG_DIR"
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
