@@ -383,7 +383,7 @@ __remove_container() {
 # Set variables
 # Registry user/org url
 REGISTRY_IMAGE_URL="${REGISTRY_IMAGE_URL:-casjaysdev}"
-REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-rhel}"
+REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-almalinux}"
 # Default platforms
 PLATFORM="arm64"
 # Enable specified versions
@@ -540,7 +540,7 @@ if [ -z "$REMOVE_CONTAINER" ] && [ "$1" != "remove" ]; then
   fi
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-REGISTRY_IMAGE_NAME="$REGISTRY_IMAGE_URL/${REGISTRY_IMAGE_NAME:-rhel}"
+REGISTRY_IMAGE_NAME="$REGISTRY_IMAGE_URL/$REGISTRY_IMAGE_NAME"
 [ -d "$RPM_BUILD_CONFIG_DIR/containers" ] || mkdir -p "$RPM_BUILD_CONFIG_DIR/containers"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main application
