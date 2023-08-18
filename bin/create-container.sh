@@ -186,10 +186,10 @@ __docker_execute() {
   local ARGS="$*"
   echo "Executing: $ARGS" && sleep 1
   if [ "$SILENT" = "true" ]; then
-    docker exec -ti $CONTAINER_NAME $ARGS &>/dev/null
+    docker exec -ti --tty $CONTAINER_NAME $ARGS &>/dev/null
     exitCode=$?
   else
-    docker exec -ti $CONTAINER_NAME $ARGS
+    docker exec -ti --tty $CONTAINER_NAME $ARGS
     exitCode=$?
   fi
   if [ $exitCode -eq 0 ]; then
@@ -281,8 +281,6 @@ __setup_build() {
   if [ "$CONTAINER_EXISTS" != "true" ]; then
     cat <<EOF | tee >"$HOME/.config/rpm-devel/scripts/$CONTAINER_NAME"
 docker run -d \
-  -it \
-  --tty \
   --privileged \
   --name $CONTAINER_NAME \
   --platform $PLATFORM \
