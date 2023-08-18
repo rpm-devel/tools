@@ -312,7 +312,9 @@ __remove_container() {
   [ -n "$name" ] || { echo "No container name provided" && return 1; }
   [ "$LOG_MESSAGE" = "true" ] || { echo "Setting log file to: $tmp_dir/$name.log" && LOG_MESSAGE="true"; }
   if [ "$name" = "all" ]; then
-    for c in $(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd64|arm64'); do
+    containers="$(docker ps -aq | grep "$CONTAINER_PREFIX_NAME" | grep -E 'amd64|arm64')"
+    [ -n "$containers" ] || { echo "No containers exist" && return 1; }
+    for c in $containers; do
       docker rm -f $c 2>>"$tmp_dir/$name.log" >/dev/null && echo "Removed $c"
     done
     rm -Rf "$home"
