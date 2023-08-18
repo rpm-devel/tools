@@ -273,7 +273,7 @@ __setup_build() {
     fi
   else
     echo "Pulling the image $SET_IMAGE:$SET_VERSION for $PLATFORM"
-    docker pull $SET_IMAGE:$SET_VERSION 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" || { echo "Failed to pull the image" && return 1; }
+    docker pull $SET_IMAGE:$SET_VERSION -q 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" || { echo "Failed to pull the image" && return 1; }
     echo "Setting up the container $CONTAINER_NAME"
   fi
   # Create container if it does not exist
