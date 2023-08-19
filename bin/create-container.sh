@@ -224,6 +224,7 @@ __setup_build() {
   RPM_PACKAGES="$(echo "$RPM_PACKAGES" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
   STDOUT_LOG_FILE="$LOG_DIR/$CONTAINER_PREFIX_NAME$SET_VERSION.log"
   STDERR_LOG_FILE="$LOG_DIR/$CONTAINER_PREFIX_NAME$SET_VERSION.err"
+  [ -f "$HOME/.rpmmacros" ] && DOCKOPT+="--volume $HOME/.rpmmacros:$CONTAINER_HOME_DIR/.rpmmacros:z "
   # Create Directories
   [ -d "$LOG_DIR" ] || mkdir -p "$LOG_DIR"
   [ -d "$HOME/.config/rpm-devel/lists" ] || mkdir -p "$HOME/.config/rpm-devel/lists"
@@ -290,7 +291,7 @@ docker run -d \
   --workdir $CONTAINER_HOME_DIR \
   --hostname $CONTAINER_HOSTNAME \
   --env TZ=America/New_York \
-  --env HOSTNAME=$CONTAINER_HOSTNAME \
+  --env HOSTNAME=$CONTAINER_HOSTNAME $DOCKOPT \
   --volume "$HOME/.ssh:/root/.ssh:z" \
   --volume "$HOME/.gnupg:/root/.gnupg:z" \
   --volume "$HOST_RPM_ROOT:$CONTAINER_RPM_ROOT:z" \
