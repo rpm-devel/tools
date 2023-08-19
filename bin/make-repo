@@ -99,17 +99,17 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean from previous builds
 echo "Cleaning Previous builds"
-rm -Rf "$HOST_PKG_ROOT/rpms"/* 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-rm -Rf "$HOST_PKG_ROOT/debug"/* 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+rm -Rf "$HOST_PKG_ROOT/rpms"/*
+rm -Rf "$HOST_PKG_ROOT/debug"/*
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Make Directories
 echo "Creating Directories"
-mkdir -p "$LOG_DIR" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-mkdir -p "$HOST_SRPM_ROOT" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-mkdir -p "$HOST_PKG_ROOT/rpms" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-mkdir -p "$HOST_PKG_ROOT/debug" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-mkdir -p "$HOST_PKG_ROOT/addons" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-mkdir -p "$HOST_PKG_ROOT/extras" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+mkdir -p "$LOG_DIR"
+mkdir -p "$HOST_SRPM_ROOT"
+mkdir -p "$HOST_PKG_ROOT/rpms"
+mkdir -p "$HOST_PKG_ROOT/debug"
+mkdir -p "$HOST_PKG_ROOT/addons"
+mkdir -p "$HOST_PKG_ROOT/extras"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
