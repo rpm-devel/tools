@@ -71,6 +71,35 @@ HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}/$DISTRO/$VER
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LOG_DIR="$HOME/Documents/builds/logs/rpmbuild"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+RPM_BUILD_CONFIG_FILE="${APPNAME}-settings.conf"
+RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if [ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ]; then
+  . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+else
+  mkdir -p "$RPM_BUILD_CONFIG_DIR"
+  cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+FTP_DOMAIN="${FTP_DOMAIN:-ftp.casjaysdev.pro}"
+FTP_DIR="${FTP_DIR:-/var/ftp/pub/Casjay/repo}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Sourceforge Web urls
+SOURCEFORGE_WEB_URL="${SOURCEFORGE_WEB_URL:-web.sourceforge.net}"
+SOURCEFORGE_FRS_URL="${SOURCEFORGE_FRS_URL:-frs.sourceforge.net}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Developnment project name
+SOURCEFORGE_PROJECT_NAME="${SOURCEFORGE_PROJECT_NAME:-rpm-devel}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Usernames
+FTP_USER="${FTP_USER:-}"
+SOURCEFORGE_USER="${SOURCEFORGE_USER:-}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Directories
+HOST_SRPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/SRPMS"
+HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/$ARCH"
+HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}/$DISTRO/$VERNAME$VERNUM/$ARCH"
+EOF
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 cat <<EOF
