@@ -69,7 +69,7 @@ HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}/$DISTRO/$VER
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set additional variables
-RPM_BUILD_CONFIG_FILE="settings.conf"
+RPM_BUILD_CONFIG_FILE="repo-settings.conf"
 RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # bring in user config
