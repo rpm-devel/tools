@@ -167,7 +167,7 @@ mkdir -p "$HOST_PKG_ROOT/rpms"
 mkdir -p "$HOST_PKG_ROOT/debug"
 mkdir -p "$HOST_PKG_ROOT/addons"
 mkdir -p "$HOST_PKG_ROOT/extras"
-mkdir -p "$HOST_PKG_ROOT/emtpy"
+mkdir -p "$HOST_PKG_ROOT/empty"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
@@ -192,8 +192,8 @@ if [ -d "$HOST_SRPM_ROOT" ]; then
   echo "Generating SRPMS REPO: $HOST_SRPM_ROOT"
   cd "$HOST_SRPM_ROOT" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
-if [ -d "$HOST_PKG_ROOT/emtpy" ]; then
-  echo "Generating Addons REPO: $HOST_PKG_ROOT/emtpy"
+if [ -d "$HOST_PKG_ROOT/empty" ]; then
+  echo "Generating Addons REPO: $HOST_PKG_ROOT/empty"
   cd "$HOST_PKG_ROOT/addons" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
 if [ -d "$HOST_PKG_ROOT/addons" ]; then
