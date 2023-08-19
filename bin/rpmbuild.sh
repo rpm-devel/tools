@@ -7,8 +7,9 @@ if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
     exit $?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[ -n "$1" ] && VERSION="$1"
-[ -n "$2" ] && ARCH="$2"
+ARCH="$SET_ARCH"
+VERNAME="$SET_NAME"
+VERNUM="$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DISTRO="RHEL"
 ARCH="${ARCH:-$(uname -m)}"
