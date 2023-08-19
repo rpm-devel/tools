@@ -187,10 +187,10 @@ __docker_execute() {
   local exitCode=0
   echo "Executing: $ARGS" && sleep 1
   if [ "$SILENT" = "false" ]; then
-    docker exec -ti --tty "$CONTAINER_NAME" sh -c "$ARGS"
+    docker exec -ti --tty "$CONTAINER_NAME" /bin/sh -c "$ARGS"
     exitCode=$?
   else
-    docker exec -ti --tty "$CONTAINER_NAME" sh -c "$ARGS" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE"
+    docker exec -ti --tty "$CONTAINER_NAME" /bin/sh -c "$ARGS" 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE"
     exitCode=$?
   fi
   if [ $exitCode -eq 0 ]; then
@@ -317,7 +317,7 @@ EOF
   [ "$statusCode" -eq 0 ] || return $statusCode
   if [ ! -f "$RPM_BUILD_CONFIG_DIR/containers/$CONTAINER_NAME" ]; then
     echo "$CONTAINER_NAME is executing post install scripts in the background: This may take awhile!!"
-    (sleep 30 && __docker_execute pkmgr update 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" &)
+    # sleep 30 && __docker_execute pkmgr update 2>>"$STDERR_LOG_FILE" >>"$STDOUT_LOG_FILE" &
   fi
   if [ "$ENTER_CONTAINER" = "true" ]; then
     echo "Entering container: $CONTAINER_NAME"
