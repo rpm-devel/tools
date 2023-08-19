@@ -40,6 +40,31 @@ if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
   exitCode=$?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+SHORTOPTS="a:,n:,v:"
+LONGOPTS="version:,arch:,name:"
+setopts=$(getopt -o "$SHORTOPTS" --long "$LONGOPTS" -n "$APPNAME" -- "$@" 2>/dev/null)
+eval set -- "${setopts[@]}" 2>/dev/null
+while :; do
+  case "$1" in
+  -a | --arch)
+    SET_ARCH="$2"
+    shift 2
+    ;;
+  -n | --name)
+    SET_NAME="$2"
+    shift 2
+    ;;
+  -v | --version)
+    SET_VERSION="$2"
+    shift 2
+    ;;
+  --)
+    shift 1
+    break
+    ;;
+  esac
+done
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ARCH="$SET_ARCH"
 VERNAME="$SET_NAME"
 VERNUM="$SET_VERSION"
