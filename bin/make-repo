@@ -167,29 +167,34 @@ mkdir -p "$HOST_PKG_ROOT/rpms"
 mkdir -p "$HOST_PKG_ROOT/debug"
 mkdir -p "$HOST_PKG_ROOT/addons"
 mkdir -p "$HOST_PKG_ROOT/extras"
+mkdir -p "$HOST_PKG_ROOT/emtpy"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
 rpm --addsign --quiet --quiet --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
-# echo "Moving SRPMS"
-# rsync --no-motd -aqhP --delete "$HOST_SRPMHOST_RPM_ROOT_ROOT"/*.rpm "$HOST_SRPM_ROOT/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-# [ $? -ne 0 ] && echo "Failed to move files from $ to $" && exit 1
+echo "Moving SRPMS"
+rsync --no-motd -aqhP --delete "$HOST_RPM_ROOT"/**/*.src.rpm "$HOST_SRPM_ROOT/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+[ $? -ne 0 ] && echo "Failed to move files from $ to $" && exit 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
-rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debugsource*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
-  rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debuginfo*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/* to $HOST_PKG_ROOT/debug" && exit 1
+rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/**/*debugsource*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
+  rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/**/*debuginfo*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/**/ to $HOST_PKG_ROOT/debug" && exit 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving RPMS"
-rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$HOST_RPM_ROOT"/rpms/*/*.rpm "$HOST_PKG_ROOT/rpms/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/* to $HOST_PKG_ROOT/rpms" && exit 1
+rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$HOST_RPM_ROOT"/rpms/**/*.rpm "$HOST_PKG_ROOT/rpms/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/**/ to $HOST_PKG_ROOT/rpms" && exit 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create repos
 if [ -d "$HOST_SRPM_ROOT" ]; then
   echo "Generating SRPMS REPO: $HOST_SRPM_ROOT"
   cd "$HOST_SRPM_ROOT" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
+fi
+if [ -d "$HOST_PKG_ROOT/emtpy" ]; then
+  echo "Generating Addons REPO: $HOST_PKG_ROOT/emtpy"
+  cd "$HOST_PKG_ROOT/addons" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
 if [ -d "$HOST_PKG_ROOT/addons" ]; then
   echo "Generating Addons REPO: $HOST_PKG_ROOT/addons"
@@ -221,10 +226,10 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
 if [ "$SOURCEFORGE_ERROR" != "true" ]; then
-  echo "$SOURCEFORGE_USER is Sending to website: $SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS"
+  echo "$SOURCEFORGE_USER is Sending to website: $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS"
   rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
   [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS" && exit 1
-  echo "$SOURCEFORGE_USER is Sending to website: /home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH"
+  echo "$SOURCEFORGE_USER is Sending to website: $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH"
   rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
     rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
   [ $? -ne 0 ] && echo "Failed to move files from $HOST_PKG_ROOT to $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH" && exit 1
@@ -232,10 +237,10 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
 if [ "$SOURCEFORGE_ERROR" != "true" ]; then
-  echo "$SOURCEFORGE_USER is Sending to FRS site: $SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/SRPMS"
+  echo "$SOURCEFORGE_USER is Sending to FRS site: $SOURCEFORGE_WEB_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/SRPMS"
   rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* $SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
   [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM" && exit 1
-  echo "$SOURCEFORGE_USER is Sending to FRS site: $SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH"
+  echo "$SOURCEFORGE_USER is Sending to FRS site: $SOURCEFORGE_WEB_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH"
   rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
     rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
   [ $? -ne 0 ] && echo "Failed to move files from $ to $" && exit 1
