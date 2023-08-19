@@ -5,7 +5,7 @@ global debug_package  %{nil}
 %_gpg_name            Jason Hempstead
 %vendor               %packager http://github.com/rpm-devel
 
-%_minorver            3.3
+%_minorver            .3.3
 %_pdistro             %distroname
 %_osver               el%{?rhel}
 %BuildArch            %{_arch}
