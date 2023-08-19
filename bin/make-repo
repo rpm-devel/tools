@@ -115,7 +115,7 @@ rpm --addsign --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RP
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
 echo "Moving SRPMS"
-rsync --no-motd -aqhP --delete "$HOST_SRPM_ROOT"/SRPMS/*.rpm "$HOST_SRPM_ROOT/"
+rsync --no-motd -aqhP --delete "$HOST_SRPM_ROOT"/*.rpm "$HOST_SRPM_ROOT/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
 rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debugsource*.rpm "$HOST_PKG_ROOT/debug/"
