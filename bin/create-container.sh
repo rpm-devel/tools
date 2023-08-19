@@ -111,6 +111,9 @@ __help() {
 }
 __gen_config() {
   cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+# Github project org 
+GITHUB_DEV_ORG="${GITHUB_DEV_ORG:-rpm-devel}"
+GITHUB_PROJECT_DIR="${GITHUB_PROJECT_DIR:-$HOME/Projects/github/\${GITHUB_DEV_ORG:-rpm-devel}}"
 # Docker Registry user/org url
 REGISTRY_IMAGE_URL="${REGISTRY_IMAGE_URL:-casjaysdev}"
 REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-almalinux}"
@@ -387,6 +390,8 @@ __remove_container() {
 #type -P sh &>/dev/null || exit 3       # exit 3 if not found
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set variables
+GITHUB_DEV_ORG="${GITHUB_DEV_ORG:-rpm-devel}"
+GITHUB_PROJECT_DIR="${GITHUB_PROJECT_DIR:-$HOME/Projects/github/\${GITHUB_DEV_ORG:-rpm-devel}}"
 # Registry user/org url
 REGISTRY_IMAGE_URL="${REGISTRY_IMAGE_URL:-casjaysdev}"
 REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-almalinux}"
@@ -405,7 +410,7 @@ DOCKER_HOME_DIR="${DOCKER_HOME_DIR:-$HOME/.local/share/rpmbuild}"
 # Directory settings
 HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}"
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}"
-HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$HOME/Projects/github/rpm-devel}"
+HOST_BUILD_ROOT="${HOST_BUILD_ROOT:-$GITHUB_PROJECT_DIR}"
 # Where to store rpm sources
 CONTAINER_BUILD_ROOT="${CONTAINER_BUILD_ROOT:-$CONTAINER_HOME_DIR/rpmbuild}"
 # Where to save the built files
