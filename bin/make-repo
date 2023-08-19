@@ -103,13 +103,14 @@ fi
 clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 cat <<EOF
-DISTRO:       $DISTRO
-NAME:         $VERNAME
-VERSION:      $VERNUM
-ARCH:         $ARCH
-Source RPMS:  $HOST_SRPM_ROOT
-Binary RPMS:  $HOST_RPM_ROOT
-Release dir:  $HOST_PKG_ROOT
+DISTRO:         "$DISTRO"
+NAME:           "$VERNAME"
+VERSION:        "$VERNUM"
+ARCH:           "$ARCH"
+Source RPMS:    "$HOST_SRPM_ROOT"
+Binary RPMS:    "$HOST_RPM_ROOT"
+Release dir:    "$HOST_PKG_ROOT"
+Settings File:  "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
 EOF
 sleep 5
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
