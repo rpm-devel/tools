@@ -113,7 +113,7 @@ mkdir -p "$HOST_PKG_ROOT/extras"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
-rpm --addsign --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+rpm --addsign --quiet --quiet --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
 # echo "Moving SRPMS"
