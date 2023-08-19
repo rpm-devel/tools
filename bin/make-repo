@@ -174,9 +174,9 @@ echo "Signing the Packages"
 rpm --addsign --quiet --quiet --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
-echo "Moving SRPMS"
-rsync --no-motd -aqhP --delete "$HOST_RPM_ROOT"/**/*.src.rpm "$HOST_SRPM_ROOT/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-[ $? -ne 0 ] && echo "Failed to move files from $ to $" && exit 1
+# echo "Moving SRPMS"
+# rsync --no-motd -aqhP --delete "$HOST_RPM_ROOT"/**/*.src.rpm "$HOST_SRPM_ROOT/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT to $HOST_SRPM_ROOT" && exit 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
 rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/**/*debugsource*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
