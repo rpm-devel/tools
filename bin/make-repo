@@ -39,13 +39,15 @@ if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
   exit $?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[ -n "$1" ] && VERSION="$1"
-[ -n "$2" ] && ARCH="$2"
+ARCH="$SET_ARCH"
+VERNAME="$SET_NAME"
+VERNUM="$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 DISTRO="RHEL"
+RELEASE="el"
 ARCH="${ARCH:-$(uname -m)}"
-VERNAME="${VERNAME:-$(grep -s '%_osver ' "$HOME/.rpmmacros" | awk -F ' ' '{print $2}' | sed 's|%.*||g' | grep '^' || echo "el")}"
-VERNUM="${VERSION:-$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")}"
+VERNAME="${VERNAME:-$(grep -s '%_osver ' "$HOME/.rpmmacros" | awk -F ' ' '{print $2}' | sed 's|%.*||g' | grep '^' || echo "$RELEASE")}"
+VERNUM="${VERNUM:-$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Local FTP server address
 FTP_DOMAIN="ftp.casjaysdev.pro"
@@ -68,14 +70,18 @@ HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAM
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}/$DISTRO/$VERNAME$VERNUM/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Set additional variables
-RPM_BUILD_CONFIG_FILE="repo-settings.conf"
-RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# bring in user config
-[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+cat <<EOF
+DISTRO:       $DISTRO
+NAME:         $VERNAME
+VERSION:      $VERNUM
+ARCH:         $ARCH
+Source RPMS:  $HOST_SRPM_ROOT
+Binary RPMS:  $HOST_RPM_ROOT
+Release dir:  $HOST_PKG_ROOT
+EOF
+sleep 5
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -z "$FTP_USER" ]; then
   FTP_ERROR="true"
