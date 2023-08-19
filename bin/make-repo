@@ -65,8 +65,8 @@ FTP_USER="${FTP_USER:-root}"
 SOURCEFORGE_USER="${SOURCEFORGE_USER:-}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
-HOST_SRPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/SRPMS}"
 HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH}"
+HOST_SRPM_ROOT="${HOST_SRPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/SRPMS}"
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LOG_DIR="$HOME/Documents/builds/logs/rpmbuild"
@@ -94,8 +94,8 @@ FTP_USER="${FTP_USER:-}"
 SOURCEFORGE_USER="${SOURCEFORGE_USER:-}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
-HOST_SRPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/SRPMS}"
 HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH}"
+HOST_SRPM_ROOT="${HOST_SRPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/SRPMS}"
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH}"
 EOF
 fi
