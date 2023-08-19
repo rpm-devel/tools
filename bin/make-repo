@@ -65,7 +65,7 @@ FTP_USER="${FTP_USER:-root}"
 SOURCEFORGE_USER="${SOURCEFORGE_USER:-}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Directories
-HOST_SRPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/srpm"
+HOST_SRPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/SRPMS"
 HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/$ARCH"
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}/$DISTRO/$VERNAME$VERNUM/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -115,7 +115,7 @@ rpm --addsign --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RP
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
 echo "Moving SRPMS"
-rsync --no-motd -aqhP --delete "$HOST_RPM_ROOT"/srpm/*.rpm "$HOST_SRPM_ROOT/"
+rsync --no-motd -aqhP --delete "$HOST_SRPM_ROOT"/SRPMS/*.rpm "$HOST_SRPM_ROOT/"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
 rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debugsource*.rpm "$HOST_PKG_ROOT/debug/"

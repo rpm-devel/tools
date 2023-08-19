@@ -21,7 +21,7 @@ global debug_package  %{nil}
 %_buildrootdir        %{getenv:HOME}/.local/tmp/BUILDROOT
 %_buildroot           %{_buildrootdir}/%{name}-%{version}-%{release}.%{BuildArch}
 
-%_srcrpmdir           %{getenv:HOME}/Documents/builds/rpmbuild/%_release_name/%_osver/srpm
+%_srcrpmdir           %{getenv:HOME}/Documents/builds/rpmbuild/%_release_name/%_osver/SRPMS
 %_rpmdir              %{getenv:HOME}/Documents/builds/rpmbuild/%_release_name/%_osver/%BuildArch/rpms
 %_debugrpmdir         %{getenv:HOME}/Documents/builds/rpmbuild/%_release_name/%_osver/%BuildArch/debug
 
