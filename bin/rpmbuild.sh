@@ -17,7 +17,7 @@ VERNAME="${VERNAME:-$(grep -s '%_osver ' "$HOME/.rpmmacros" | awk -F ' ' '{print
 VERNUM="${VERSION:-$(grep -s ^'VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SPEC_DIR="$HOME/rpmbuild"
-LOG_DIR="$HOME/Documents/logs"
+LOG_DIR="$HOME/Documents/builds/logs/rpmbuild"
 BUILD_DIR="$HOME/.local/tmp/BUILD_ROOT/BUILD"
 BUILD_ROOT="$HOME/.local/tmp/BUILD_ROOT/BUILD_ROOT"
 SRC_DIR="$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/$ARCH"

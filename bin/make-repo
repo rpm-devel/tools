@@ -69,6 +69,7 @@ HOST_SRPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNA
 HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild}/$DISTRO/$VERNAME$VERNUM/$ARCH"
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge}/$DISTRO/$VERNAME$VERNUM/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+LOG_DIR="$HOME/Documents/builds/logs/rpmbuild"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -98,79 +99,89 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clean from previous builds
 echo "Cleaning Previous builds"
-rm -Rf "$HOST_PKG_ROOT/rpms"/*
-rm -Rf "$HOST_PKG_ROOT/debug"/*
+rm -Rf "$HOST_PKG_ROOT/rpms"/* 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+rm -Rf "$HOST_PKG_ROOT/debug"/* 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Make Directories
 echo "Creating Directories"
-mkdir -p "$HOST_SRPM_ROOT"
-mkdir -p "$HOST_PKG_ROOT/rpms"
-mkdir -p "$HOST_PKG_ROOT/debug"
-mkdir -p "$HOST_PKG_ROOT/addons"
-mkdir -p "$HOST_PKG_ROOT/extras"
+mkdir -p "$LOG_DIR" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+mkdir -p "$HOST_SRPM_ROOT" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+mkdir -p "$HOST_PKG_ROOT/rpms" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+mkdir -p "$HOST_PKG_ROOT/debug" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+mkdir -p "$HOST_PKG_ROOT/addons" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+mkdir -p "$HOST_PKG_ROOT/extras" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign Packages
 echo "Signing the Packages"
-rpm --addsign --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm
+rpm --addsign --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Move RPMs to appropriate Directories
-echo "Moving SRPMS"
-rsync --no-motd -aqhP --delete "$HOST_SRPM_ROOT"/*.rpm "$HOST_SRPM_ROOT/"
+# echo "Moving SRPMS"
+# rsync --no-motd -aqhP --delete "$HOST_SRPMHOST_RPM_ROOT_ROOT"/*.rpm "$HOST_SRPM_ROOT/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+# [ $? -ne 0 ] && echo "Failed to move files from $ to $" && exit 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving Debug RPMS"
-rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debugsource*.rpm "$HOST_PKG_ROOT/debug/"
-rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debuginfo*.rpm "$HOST_PKG_ROOT/debug/"
+rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debugsource*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
+  rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/*/*debuginfo*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/* to $HOST_PKG_ROOT/debug" && exit 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "Moving RPMS"
-rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$HOST_RPM_ROOT"/rpms/*/*.rpm "$HOST_PKG_ROOT/rpms/"
+rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$HOST_RPM_ROOT"/rpms/*/*.rpm "$HOST_PKG_ROOT/rpms/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/* to $HOST_PKG_ROOT/rpms" && exit 1
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create repos
 if [ -d "$HOST_SRPM_ROOT" ]; then
   echo "Generating SRPMS REPO"
-  cd "$HOST_SRPM_ROOT" && createrepo -q -d ./
+  cd "$HOST_SRPM_ROOT" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
 if [ -d "$HOST_PKG_ROOT/addons" ]; then
   echo "Generating Addons REPO"
-  cd "$HOST_PKG_ROOT/addons" && createrepo -q -d ./
+  cd "$HOST_PKG_ROOT/addons" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
 if [ -d "$HOST_PKG_ROOT/extras" ]; then
   echo "Generating Extras REPO"
-  cd "$HOST_PKG_ROOT/extras" && createrepo -q -d ./
+  cd "$HOST_PKG_ROOT/extras" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
 if [ -d "$HOST_PKG_ROOT/debug" ]; then
   echo "Generating DEBUG REPO"
-  cd "$HOST_PKG_ROOT/debug" && createrepo -q -d ./
+  cd "$HOST_PKG_ROOT/debug" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
 if [ -d "$HOST_PKG_ROOT/rpms" ]; then
   echo "Generating RPMS REPO"
-  cd "$HOST_PKG_ROOT/rpms" && createrepo -q -d ./
+  cd "$HOST_PKG_ROOT/rpms" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to locale FTP Server
 if [ "$FTP_ERROR" != "true" ]; then
-  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$ARCH/SRPMS"
-  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp "$HOST_SRPM_ROOT""/* $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS/"
-  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$ARCH/$VERNUM"
-  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/"
-  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/"
+  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS"
+  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp "$HOST_SRPM_ROOT""/* $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+  [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS" && exit 1
+  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH"
+  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
+    rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+  [ $? -ne 0 ] && echo "Failed to move files from $HOST_PKG_ROOT to $FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH" && exit 1
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to website
 if [ "$SOURCEFORGE_ERROR" != "true" ]; then
   echo "$SOURCEFORGE_USER is Sending to website: /home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS"
-  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS/"
+  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+  [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS" && exit 1
   echo "$SOURCEFORGE_USER is Sending to website: /home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH"
-  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/"
-  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/"
+  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
+    rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+  [ $? -ne 0 ] && echo "Failed to move files from $HOST_PKG_ROOT to $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH" && exit 1
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
 if [ "$SOURCEFORGE_ERROR" != "true" ]; then
   echo "$SOURCEFORGE_USER is Sending to FRS site: /home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/SRPMS"
-  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* $SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/
+  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* $SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+  [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM" && exit 1
   echo "$SOURCEFORGE_USER is Sending to FRS site: /home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH"
-  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/"
-  rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/"
+  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
+    rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
+  [ $? -ne 0 ] && echo "Failed to move files from $ to $" && exit 1
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 echo "The script has completed"
