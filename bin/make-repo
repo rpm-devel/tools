@@ -35,8 +35,9 @@ if [[ "$1" == "--debug" ]]; then shift 1 && set -xo pipefail && export SCRIPT_OP
 trap 'exitCode=${exitCode:-$?};[ -n "$MAKE_REPO_TEMP_FILE" ] && [ -f "$MAKE_REPO_TEMP_FILE" ] && rm -Rf "$MAKE_REPO_TEMP_FILE" &>/dev/null' EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
+  SCRIPT_UPDATE="true"
   bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
-  exit $?
+  exitCode=$?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ARCH="$SET_ARCH"
@@ -99,6 +100,7 @@ HOST_SRPM_ROOT="${HOST_SRPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNA
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/$ARCH}"
 EOF
 fi
+[ "$SCRIPT_UPDATE" = "true" ] && exit $exitCode
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
