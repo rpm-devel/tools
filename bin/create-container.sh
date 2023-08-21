@@ -111,7 +111,7 @@ __help() {
 }
 __gen_config() {
   cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
-# Github project org 
+# Github project org
 GITHUB_DEV_ORG="${GITHUB_DEV_ORG:-rpm-devel}"
 GITHUB_PROJECT_DIR="${GITHUB_PROJECT_DIR:-$HOME/Projects/github/\${GITHUB_DEV_ORG:-rpm-devel}}"
 # Docker Registry user/org url
@@ -538,6 +538,7 @@ while :; do
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
+command -v pinentry &>/dev/null || { command -v pkmgr &>/dev/null && pkmgr silent install pinentry; } || { printf '%s\n' "Please install pinentry" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ -z "$REMOVE_CONTAINER" ] && [ "$1" != "remove" ]; then
   if [ "$(uname -m)" = "x86_64" ]; then
