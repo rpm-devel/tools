@@ -39,8 +39,8 @@ find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
 # Finally run rpmbuild
 for i in $spec_list; do
     spec_name="$(basename "${i//.spec/}")"
-    echo "Building $spec_name package on $(date +'%Y-%m-%d at %H:%M')" | tee -a "$LOG_DIR/$spec_name/errors.txt" "$LOG_DIR/$spec_name/build.txt"
     mkdir -p "$LOG_DIR/$spec_name"
+    echo "Building $spec_name package on $(date +'%Y-%m-%d at %H:%M')" | tee -a "$LOG_DIR/$spec_name/errors.txt" "$LOG_DIR/$spec_name/build.txt"
     if [ -f "$(builtin type -P yum-builddep)" ]; then
         echo "Installing dependencies for $spec_name"
         yum-builddep -yy -q --skip-broken "$i" >>"$LOG_DIR/$spec_name/packages.txt"
