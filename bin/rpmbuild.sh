@@ -44,16 +44,17 @@ for i in $spec_list; do
     if [ -f "$(builtin type -P yum-builddep)" ]; then
         echo "Installing dependencies for $spec_name"
         yum-builddep -yy -q --skip-broken "$i" >>"$LOG_DIR/$spec_name/packages.txt"
+        [ $? = 0 ] && echo "Done installing dependencies"||echo "Failed to install dependencies"
     fi
     if [ -f "$(builtin type -P rpmbuild)" ]; then
+        echo "Building $spec_name"
         rpmbuild -ba "$i" 2>"$LOG_DIR/$spec_name/errors.txt" >"$LOG_DIR/$spec_name/build.txt"
         statusCode="$?"
         echo "$i exit code $statusCode" >>"$LOG_DIR/$spec_name/status.txt"
         if [ $statusCode -eq 0 ]; then
-            echo "Done building $spec_name"
+            echo "Done building $spec_name on $(date)"
         else
-            echo "Failed to build $i"
-            echo "See $LOG_DIR/$spec_name/errors.txt for details"
+            echo "Failed to build $i: See $LOG_DIR/$spec_name/errors.txt for details"
         fi
         printf '\n%s\n' "# - - - - - - - - - - - - - - - - -"
     fi
