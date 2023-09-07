@@ -30,21 +30,20 @@ rm -Rf "${SRC_DIR:?}"/* "${TARGET_DIR:?}"/* "${BUILD_DIR:?}"/* "${BUILD_ROOT:?}"
 mkdir -p "$SRC_DIR" "$TARGET_DIR" "$BUILD_DIR" "$BUILD_ROOT" "$LOG_DIR"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create spec list
-ls "$SPEC_DIR"/*/*.spec >"$LOG_DIR/specs.txt"
-[ -s "$LOG_DIR/specs.txt" ] || { echo "No spec files found" && exit 1; }
+ls "$SPEC_DIR"/*/*.spec >"$LOG_DIR/specs.txt" && spec_list="$(grep -Ev '#|^$' "$LOG_DIR/specs.txt")" || spec_list=""
+[ -n "$spec_list" ] || { echo "Can not find any spec files in $SPEC_DIR" && exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 find "$HOME/.gnupg" "$HOME/.ssh" -type f -exec chmod 600 {} \;
 find "$HOME/.gnupg" "$HOME/.ssh" -type d -exec chmod 700 {} \;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Finally run rpmbuild
-spec_list="$(cat "$LOG_DIR/specs.txt")"
 for i in $spec_list; do
     spec_name="$(basename "${i//.spec/}")"
     echo "Building $spec_name package on $(date +'%Y-%m-%d at %H:%M')" | tee -a "$LOG_DIR/$spec_name/errors.txt" "$LOG_DIR/$spec_name/build.txt"
     mkdir -p "$LOG_DIR/$spec_name"
     if [ -f "$(builtin type -P yum-builddep)" ]; then
         echo "Installing dependencies for $spec_name"
-        yum-builddep -yy -q --skip-broken "$i" >"$LOG_DIR/$spec_name/packages.txt"
+        yum-builddep -yy -q --skip-broken "$i" >>"$LOG_DIR/$spec_name/packages.txt"
     fi
     if [ -f "$(builtin type -P rpmbuild)" ]; then
         rpmbuild -ba "$i" 2>"$LOG_DIR/$spec_name/errors.txt" >"$LOG_DIR/$spec_name/build.txt"
