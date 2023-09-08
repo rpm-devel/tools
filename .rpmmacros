@@ -2,7 +2,7 @@ global debug_package  %{nil}
 
 %distroname           casjay
 %packager             CasjaysDev
-%_gpg_name            Jason Hempstead
+%_gpg_name            CasjaysDev RPM Dev <rpm-devel@casjaysdev.pro>
 %vendor               %packager http://github.com/rpm-devel
 
 %_minorver            .3.3
@@ -55,3 +55,4 @@ global debug_package  %{nil}
 %__arch_install_post [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
     case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
     /usr/lib/rpm/check-buildroot
+
