@@ -62,7 +62,7 @@ done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign rpm packages
 find "$SRC_DIR/" -iname "*.rpm" >"$LOG_DIR/pkgs.txt"
-rpmsign --addsign "$(<"$LOG_DIR/pkgs.txt")"
+rpmsign --addsign $(<"$LOG_DIR/pkgs.txt")
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 exit
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
