@@ -1,0 +1,485 @@
+#!/usr/bin/env bash
+# shellcheck shell=bash
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+##@Version           :  202604241200-git
+# @@Author           :  Jason Hempstead
+# @@Contact          :  git-admin@casjaysdev.pro
+# @@License          :  LICENSE.md
+# @@ReadME           :  create-mirror --help
+# @@Copyright        :  Copyright: (c) 2026 Jason Hempstead, Casjays Developments
+# @@Created          :  Friday, Apr 24, 2026 12:00 EDT
+# @@File             :  create-mirror
+# @@Description      :  Download upstream repos and re-sign for local mirror
+# @@Changelog        :  Initial version
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+set -uo pipefail
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+APPNAME="create-mirror"
+VERSION="202604241200-git"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Color helpers
+if [ -t 1 ]; then
+  CLR_RED=$(tput setaf 1 2>/dev/null) CLR_GRN=$(tput setaf 2 2>/dev/null)
+  CLR_YEL=$(tput setaf 3 2>/dev/null) CLR_BLU=$(tput setaf 4 2>/dev/null)
+  CLR_BLD=$(tput bold 2>/dev/null)    CLR_RST=$(tput sgr0 2>/dev/null)
+else
+  CLR_RED="" CLR_GRN="" CLR_YEL="" CLR_BLU="" CLR_BLD="" CLR_RST=""
+fi
+msg_info()  { printf "%s[INFO]%s  %s\n" "$CLR_BLU" "$CLR_RST" "$*"; }
+msg_ok()    { printf "%s[ OK ]%s  %s\n" "$CLR_GRN" "$CLR_RST" "$*"; }
+msg_warn()  { printf "%s[WARN]%s  %s\n" "$CLR_YEL" "$CLR_RST" "$*"; }
+msg_error() { printf "%s[FAIL]%s  %s\n" "$CLR_RED" "$CLR_RST" "$*"; }
+msg_step()  { printf "\n%s==> %s%s\n" "$CLR_BLD" "$*" "$CLR_RST"; }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Defaults
+DISTRO="RHEL"
+RELEASE="el"
+ARCH="${ARCH:-$(uname -m)}"
+VERNUM=""
+DRY_RUN="false"
+SIGN_PKGS="true"
+REPOS_TO_SYNC=""
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Config
+MIRROR_CONFIG_DIR="$HOME/.config/rpm-devel"
+MIRROR_CONFIG_FILE="create-mirror-settings.conf"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Infer layout from make-repo conventions
+MIRROR_ROOT="${MIRROR_ROOT:-$HOME/Documents/builds/mirror}"
+LOG_DIR="${LOG_DIR:-$HOME/Documents/builds/logs/mirror}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__help() {
+  cat <<EOF
+${CLR_BLD}$APPNAME${CLR_RST} - Download upstream repos and re-sign packages for local mirror
+
+${CLR_BLD}Usage:${CLR_RST}
+  $APPNAME [options]
+
+${CLR_BLD}Options:${CLR_RST}
+  -v, --version NUM    EL version to mirror (7, 8, 9, 10)
+  -a, --arch ARCH      Architecture (default: $(uname -m))
+  -r, --repos LIST     Comma-separated repo IDs to sync (default: all casjay-* repos)
+  --dry-run            Show what would be done without doing it
+  --no-sign            Skip re-signing packages
+  --help               Show this help
+  --config             Generate config file
+
+${CLR_BLD}Examples:${CLR_RST}
+  $APPNAME -v 10                          # Mirror all repos for EL10
+  $APPNAME -v 10 -r casjay-epel           # Mirror only EPEL for EL10
+  $APPNAME -v 9 -a aarch64               # Mirror EL9 for aarch64
+  $APPNAME -v 10 --dry-run               # Show what would be synced
+
+${CLR_BLD}Mirror layout:${CLR_RST}
+  $MIRROR_ROOT/RHEL/{VER}/{ARCH}/
+    casjay/     CasjaysDev packages (built locally, not mirrored)
+    testing/    Pre-release packages (built locally, not mirrored)
+    os/         Upstream base OS (AlmaLinux)
+    langs/      Languages (PHP, Node.js, Yarn)
+    databases/  Databases (MariaDB, PostgreSQL, MongoDB)
+    infra/      Infrastructure (Docker, Jenkins, Webmin)
+    extras/     Community (EPEL, RPM Fusion, Ghettoforge)
+    kernel/     ELRepo kernel + drivers
+    debug/      debuginfo/debugsource RPMs
+    empty/      Placeholder for missing arches
+  $MIRROR_ROOT/RHEL/{VER}/
+    sources/    All source RPMs
+
+${CLR_BLD}Config:${CLR_RST} $MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE
+EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__gen_config() {
+  mkdir -p "$MIRROR_CONFIG_DIR"
+  [ -f "$MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE" ] && {
+    msg_warn "Config exists: $MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE"
+    return 0
+  }
+  cat <<'CONF' > "$MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE"
+# create-mirror settings
+# Mirror root directory (layout: $MIRROR_ROOT/RHEL/{VER}/{ARCH}/...)
+MIRROR_ROOT="$HOME/Documents/builds/mirror"
+
+# Log directory
+LOG_DIR="$HOME/Documents/builds/logs/mirror"
+
+# Re-sign packages with our GPG key (true/false)
+SIGN_PKGS="true"
+
+
+# Repos to exclude from mirroring (comma-separated repo IDs)
+# Example: EXCLUDE_REPOS="casjay-os-base,casjay-os-appstream"
+EXCLUDE_REPOS=""
+
+# Maximum parallel downloads for reposync
+REPOSYNC_THREADS="8"
+
+# Additional reposync options
+REPOSYNC_EXTRA_OPTS=""
+CONF
+  msg_ok "Config written: $MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Load config
+[ -f "$MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE" ] && . "$MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Detect tools
+__check_tools() {
+  local missing=0
+  for tool in reposync createrepo_c rpm rpmsign; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      # createrepo_c fallback
+      if [ "$tool" = "createrepo_c" ]; then
+        if command -v createrepo >/dev/null 2>&1; then
+          CREATEREPO_BIN="createrepo"
+          continue
+        fi
+      fi
+      msg_error "Required tool not found: $tool"
+      missing=$((missing + 1))
+    fi
+  done
+  CREATEREPO_BIN="${CREATEREPO_BIN:-createrepo_c}"
+  [ "$missing" -gt 0 ] && { msg_error "Install missing tools: dnf install yum-utils createrepo_c rpm-sign"; return 1; }
+  return 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Get list of repos from repo file
+# All output except the repo list goes to stderr so $() capture works
+__get_repo_list() {
+  local ver="$1"
+  local repo_file=""
+
+  # Find the right repo file
+  if [ -f "/etc/yum.repos.d/casjay.repo" ]; then
+    repo_file="/etc/yum.repos.d/casjay.repo"
+  else
+    msg_warn "No casjay.repo found in /etc/yum.repos.d/" >&2
+    for d in "$HOME/rpmbuild/casjay-release" "$HOME/Projects/github/rpm-devel/casjay-release" "$HOME/Projects/local/system/repo/rpm-devel/casjay-release"; do
+      if [ "$ver" -ge 10 ] && [ -f "$d/casjay.rh10.repo" ]; then
+        repo_file="$d/casjay.rh10.repo"; break
+      elif [ "$ver" -eq 9 ] && [ -f "$d/casjay.rh9.repo" ]; then
+        repo_file="$d/casjay.rh9.repo"; break
+      elif [ "$ver" -eq 8 ] && [ -f "$d/casjay.rh8.repo" ]; then
+        repo_file="$d/casjay.rh8.repo"; break
+      elif [ "$ver" -le 7 ] && [ -f "$d/casjay.rh.repo" ]; then
+        repo_file="$d/casjay.rh.repo"; break
+      fi
+    done
+  fi
+
+  if [ -z "$repo_file" ] || [ ! -f "$repo_file" ]; then
+    msg_error "Cannot find repo file for EL$ver" >&2
+    return 1
+  fi
+
+  msg_info "Using repo file: $repo_file" >&2
+
+  # Extract ALL section names from the repo file
+  local repos
+  repos=$(grep -E '^\[' "$repo_file" | sed 's/[][]//g' | sort -u)
+
+  # Filter to requested repos if specified
+  if [ -n "$REPOS_TO_SYNC" ]; then
+    local filtered=""
+    for r in $(echo "$REPOS_TO_SYNC" | tr ',' ' '); do
+      echo "$repos" | grep -qx "$r" && filtered="$filtered $r"
+    done
+    repos="$filtered"
+  fi
+
+  # Exclude specified repos
+  if [ -n "${EXCLUDE_REPOS:-}" ]; then
+    for r in $(echo "$EXCLUDE_REPOS" | tr ',' ' '); do
+      repos=$(echo "$repos" | grep -v "^${r}$")
+    done
+  fi
+
+  # Only output the repo names — nothing else
+  echo "$repos"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Determine which local dir a repo should sync into
+# See tools/LAYOUT.md for the full mapping
+__repo_dest_dir() {
+  local repo_id="$1"
+  local base_dir="$2"
+  case "$repo_id" in
+    # ALL SRPM/source repos -> sources/ FIRST (before any other match)
+    *-srpm|*-SRPMS|*-source)
+      echo "$MIRROR_SRPMS" ;;
+    # Upstream OS repos -> os/
+    casjay-os|casjay-os-base|casjay-os-appstream|casjay-os-crb|casjay-os-extras|casjay-os-plus)
+      echo "$base_dir/os" ;;
+    casjay-os-updates|casjay-os-highavailability|casjay-os-nfv|casjay-os-rt)
+      echo "$base_dir/os" ;;
+    casjay-os-resilientstorage|casjay-os-saphana|casjay-os-sap|casjay-os-centosplus)
+      echo "$base_dir/os" ;;
+    # Languages -> langs/
+    casjay-remi*|casjay-nodejs|casjay-yarn)
+      echo "$base_dir/langs" ;;
+    # Databases -> databases/
+    casjay-mariadb|casjay-postgresql|casjay-mongodb|casjay-mssql)
+      echo "$base_dir/databases" ;;
+    # Infrastructure -> infra/
+    casjay-docker*|casjay-jenkins|casjay-webmin|casjay-pritunl|casjay-copr-*|casjay-i2pd)
+      echo "$base_dir/infra" ;;
+    # Kernel -> kernel/
+    casjay-elrepo*)
+      echo "$base_dir/kernel" ;;
+    # Community extras -> extras/
+    casjay-epel|casjay-rpmfusion*|casjay-gf)
+      echo "$base_dir/extras" ;;
+    # Our own repos -> skip (built locally, not mirrored)
+    casjay-packages|casjay-testing|casjay-rpms|casjay-addons|casjay-extras|casjay-debug|casjay-sources)
+      msg_warn "$repo_id is a local repo — skipping mirror sync" >&2
+      return 1 ;;
+    # SCLo (EL7) -> os/
+    casjay-sclo*)
+      echo "$base_dir/os" ;;
+    # Non-prefixed repo names (legacy naming in some repo files)
+    remi-modular*)
+      echo "$base_dir/langs" ;;
+    mongodb*|postgres*|pgsql*)
+      echo "$base_dir/databases" ;;
+    webmin*|pritunl*)
+      echo "$base_dir/infra" ;;
+    # Everything else -> extras/
+    *)
+      echo "$base_dir/extras" ;;
+  esac
+}
+
+# Sync a single repo
+__sync_repo() {
+  local repo_id="$1"
+  local dest_dir="$2"
+  local log_file="$LOG_DIR/${repo_id}.log"
+
+  # Route to correct subdir (returns 1 for local repos that shouldn't be mirrored)
+  dest_dir=$(__repo_dest_dir "$repo_id" "$dest_dir") || return 0
+
+  msg_info "Syncing: $repo_id -> $dest_dir"
+
+  if [ "$DRY_RUN" = "true" ]; then
+    msg_info "[DRY-RUN] reposync --repoid=$repo_id --download-path=$dest_dir --norepopath --newest-only"
+    return 0
+  fi
+
+  mkdir -p "$dest_dir" "$LOG_DIR"
+
+  if reposync \
+    --repoid="$repo_id" \
+    --download-path="$dest_dir" \
+    --norepopath \
+    --newest-only \
+    --download-metadata \
+    ${REPOSYNC_EXTRA_OPTS:-} \
+    >>"$log_file" 2>&1; then
+    local count
+    count=$(find "$dest_dir" -name "*.rpm" 2>/dev/null | wc -l)
+    msg_ok "$repo_id: $count packages"
+    return 0
+  else
+    msg_error "$repo_id: sync failed (see $log_file)"
+    return 1
+  fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Separate debug packages from main
+__organize_packages() {
+  local base_dir="$1"
+
+  msg_step "Organizing packages"
+
+  local debug_dir="$base_dir/debug"
+  mkdir -p "$debug_dir"
+
+  # Move debuginfo/debugsource from all subdirs to debug/
+  local moved=0
+  while IFS= read -r -d '' rpm; do
+    local dir
+    dir=$(dirname "$rpm")
+    [ "$dir" = "$debug_dir" ] && continue
+    mv "$rpm" "$debug_dir/" 2>/dev/null && moved=$((moved + 1))
+  done < <(find "$base_dir" -maxdepth 2 \( -name "*debuginfo*" -o -name "*debugsource*" \) -name "*.rpm" -print0 2>/dev/null)
+
+  [ "$moved" -gt 0 ] && msg_info "Moved $moved debug packages to $debug_dir"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Re-sign all packages
+__sign_packages() {
+  local base_dir="$1"
+
+  msg_step "Signing packages"
+
+  if [ "$SIGN_PKGS" != "true" ]; then
+    msg_info "Signing disabled (--no-sign)"
+    return 0
+  fi
+
+  if [ "$DRY_RUN" = "true" ]; then
+    msg_info "[DRY-RUN] Would sign all RPMs in $base_dir"
+    return 0
+  fi
+
+  # Check GPG key
+  if ! gpg --list-secret-keys 2>/dev/null | grep -q "sec"; then
+    msg_warn "No GPG secret key found — skipping signing"
+    return 0
+  fi
+
+  local rpms
+  rpms=$(find "$base_dir" -name "*.rpm" -print 2>/dev/null)
+  local count
+  count=$(echo "$rpms" | grep -c "\.rpm$" 2>/dev/null || echo 0)
+
+  if [ "$count" -eq 0 ]; then
+    msg_warn "No RPMs found to sign in $base_dir"
+    return 0
+  fi
+
+  msg_info "Signing $count packages..."
+  echo "$rpms" | xargs -r -d '\n' rpmsign --addsign --quiet 2>>"$LOG_DIR/signing.log"
+  local rc=$?
+
+  if [ $rc -eq 0 ]; then
+    msg_ok "Signed $count packages"
+  else
+    msg_error "Signing had errors (see $LOG_DIR/signing.log)"
+  fi
+  return $rc
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Run createrepo on all repo dirs
+__create_repos() {
+  local base_dir="$1"
+
+  msg_step "Creating repo metadata"
+
+  for sub in casjay testing os langs databases infra extras kernel debug; do
+    local dir="$base_dir/$sub"
+    [ -d "$dir" ] || continue
+
+    if [ "$DRY_RUN" = "true" ]; then
+      msg_info "[DRY-RUN] $CREATEREPO_BIN -q -d $dir"
+      continue
+    fi
+
+    # Only run if directory has RPMs or if repodata doesn't exist
+    if find "$dir" -name "*.rpm" -print -quit 2>/dev/null | grep -q .; then
+      msg_info "createrepo: $sub/"
+      $CREATEREPO_BIN -q -d "$dir" 2>>"$LOG_DIR/createrepo.log" || {
+        msg_error "createrepo failed for $dir"
+        continue
+      }
+      msg_ok "$sub/ repo metadata created"
+    else
+      # Create empty repo
+      mkdir -p "$dir"
+      $CREATEREPO_BIN -q "$dir" 2>/dev/null
+    fi
+  done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Parse arguments
+SHORTOPTS="v:,a:,r:"
+LONGOPTS="version:,arch:,repos:,dry-run,no-sign,no-skip,help,config"
+setopts=$(getopt -o "$SHORTOPTS" --long "$LONGOPTS" -n "$APPNAME" -- "$@" 2>/dev/null)
+eval set -- "${setopts[@]}" 2>/dev/null
+while :; do
+  case "$1" in
+    -v|--version) VERNUM="$2"; shift 2 ;;
+    -a|--arch)    ARCH="$2"; shift 2 ;;
+    -r|--repos)   REPOS_TO_SYNC="$2"; shift 2 ;;
+    --dry-run)    DRY_RUN="true"; shift 1 ;;
+    --no-sign)    SIGN_PKGS="false"; shift 1 ;;
+    --config)     __gen_config; exit $? ;;
+    --help)       __help; exit 0 ;;
+    --)           shift 1; break ;;
+  esac
+done
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Validate
+if [ -z "$VERNUM" ]; then
+  VERNUM=$(grep -s '^VERSION_ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+fi
+
+if [ -z "$VERNUM" ]; then
+  msg_error "Cannot determine EL version. Use: $APPNAME -v 10"
+  exit 1
+fi
+
+# Set paths
+MIRROR_BASE="$MIRROR_ROOT/$DISTRO/$VERNUM/$ARCH"
+MIRROR_SRPMS="$MIRROR_ROOT/$DISTRO/$VERNUM/sources"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Check tools
+__check_tools || exit 1
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Summary
+msg_step "Mirror Configuration"
+cat <<EOF
+  ${CLR_BLD}Distro:${CLR_RST}      $DISTRO
+  ${CLR_BLD}Version:${CLR_RST}     $VERNUM
+  ${CLR_BLD}Arch:${CLR_RST}        $ARCH
+  ${CLR_BLD}Mirror dir:${CLR_RST}  $MIRROR_BASE
+  ${CLR_BLD}SRPMs dir:${CLR_RST}   $MIRROR_SRPMS
+  ${CLR_BLD}Sign:${CLR_RST}        $SIGN_PKGS
+  ${CLR_BLD}Dry run:${CLR_RST}     $DRY_RUN
+  ${CLR_BLD}Log dir:${CLR_RST}     $LOG_DIR
+EOF
+[ "$DRY_RUN" != "true" ] && sleep 3
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Create directories
+if [ "$DRY_RUN" != "true" ]; then
+  mkdir -p "$MIRROR_BASE"/{casjay,testing,os,langs,databases,infra,extras,kernel,debug,empty} "$MIRROR_SRPMS" "$LOG_DIR"
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Get repos to sync
+msg_step "Discovering repos"
+repos=$(__get_repo_list "$VERNUM")
+if [ -z "$repos" ]; then
+  msg_error "No repos found to sync"
+  exit 1
+fi
+
+repo_count=$(echo "$repos" | wc -w)
+msg_info "Found $repo_count repos to sync"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Sync each repo
+msg_step "Syncing packages"
+synced=0
+failed=0
+failed_repos=""
+
+for repo_id in $repos; do
+  if __sync_repo "$repo_id" "$MIRROR_BASE"; then
+    synced=$((synced + 1))
+  else
+    failed=$((failed + 1))
+    failed_repos="$failed_repos $repo_id"
+  fi
+done
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Organize (separate debug from main)
+__organize_packages "$MIRROR_BASE"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Sign all packages
+__sign_packages "$MIRROR_BASE"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Create repo metadata
+__create_repos "$MIRROR_BASE"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Summary
+msg_step "Summary"
+total_rpms=$(find "$MIRROR_BASE" -name "*.rpm" 2>/dev/null | wc -l)
+echo "  ${CLR_GRN}Repos synced:${CLR_RST}  $synced/$repo_count"
+[ "$failed" -gt 0 ] && echo "  ${CLR_RED}Repos failed:${CLR_RST}  $failed ($failed_repos )"
+echo "  ${CLR_BLU}Total RPMs:${CLR_RST}    $total_rpms"
+echo "  ${CLR_BLU}Mirror path:${CLR_RST}   $MIRROR_BASE"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[ "$failed" -gt 0 ] && exit 1
+exit 0
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# end

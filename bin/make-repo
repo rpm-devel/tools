@@ -353,22 +353,27 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 msg_step "Cleaning previous staging output"
 if [ "${DRY_RUN}" = "true" ]; then
-  msg_dry "rm -Rf ${HOST_PKG_ROOT}/rpms/* ${HOST_PKG_ROOT}/debug/*"
+  msg_dry "rm -Rf ${HOST_PKG_ROOT}/casjay/* ${HOST_PKG_ROOT}/debug/*"
 else
-  rm -Rf "${HOST_PKG_ROOT}/rpms"/* 2>/dev/null || true
+  rm -Rf "${HOST_PKG_ROOT}/casjay"/* 2>/dev/null || true
   rm -Rf "${HOST_PKG_ROOT}/debug"/* 2>/dev/null || true
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 msg_step "Creating directories"
 if [ "${DRY_RUN}" = "true" ]; then
-  msg_dry "mkdir -p ${LOG_DIR} ${HOST_SRPM_ROOT} ${HOST_PKG_ROOT}/{rpms,debug,addons,extras,empty}"
+  msg_dry "mkdir -p ${LOG_DIR} ${HOST_SRPM_ROOT} ${HOST_PKG_ROOT}/{casjay,testing,os,langs,databases,infra,extras,kernel,debug,empty}"
 else
   mkdir -p "${LOG_DIR}"
   mkdir -p "${HOST_SRPM_ROOT}"
-  mkdir -p "${HOST_PKG_ROOT}/rpms"
-  mkdir -p "${HOST_PKG_ROOT}/debug"
-  mkdir -p "${HOST_PKG_ROOT}/addons"
+  mkdir -p "${HOST_PKG_ROOT}/casjay"
+  mkdir -p "${HOST_PKG_ROOT}/testing"
+  mkdir -p "${HOST_PKG_ROOT}/os"
+  mkdir -p "${HOST_PKG_ROOT}/langs"
+  mkdir -p "${HOST_PKG_ROOT}/databases"
+  mkdir -p "${HOST_PKG_ROOT}/infra"
   mkdir -p "${HOST_PKG_ROOT}/extras"
+  mkdir -p "${HOST_PKG_ROOT}/kernel"
+  mkdir -p "${HOST_PKG_ROOT}/debug"
   mkdir -p "${HOST_PKG_ROOT}/empty"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -419,29 +424,34 @@ safe_rsync \
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 msg_step "Moving binary RPMs"
 safe_rsync \
-  "RPMs -> ${HOST_PKG_ROOT}/rpms" \
+  "RPMs -> ${HOST_PKG_ROOT}/casjay" \
   "yes" \
   "${HOST_RPM_ROOT}/rpms/**/*.rpm" \
-  "${HOST_PKG_ROOT}/rpms/" \
+  "${HOST_PKG_ROOT}/casjay/" \
   "--exclude=*debuginfo*" "--exclude=*debugsource*"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 msg_step "Generating repositories"
-run_createrepo "SRPMS"   "${HOST_SRPM_ROOT}"
-run_createrepo "empty"   "${HOST_PKG_ROOT}/empty"
-run_createrepo "addons"  "${HOST_PKG_ROOT}/addons"
+run_createrepo "sources" "${HOST_SRPM_ROOT}"
+run_createrepo "casjay"  "${HOST_PKG_ROOT}/casjay"
+run_createrepo "testing" "${HOST_PKG_ROOT}/testing"
+run_createrepo "os"      "${HOST_PKG_ROOT}/os"
+run_createrepo "langs"   "${HOST_PKG_ROOT}/langs"
+run_createrepo "databases" "${HOST_PKG_ROOT}/databases"
+run_createrepo "infra"   "${HOST_PKG_ROOT}/infra"
 run_createrepo "extras"  "${HOST_PKG_ROOT}/extras"
+run_createrepo "kernel"  "${HOST_PKG_ROOT}/kernel"
 run_createrepo "debug"   "${HOST_PKG_ROOT}/debug"
-run_createrepo "rpms"    "${HOST_PKG_ROOT}/rpms"
+run_createrepo "empty"   "${HOST_PKG_ROOT}/empty"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to local FTP server
 if [ "${SKIP_FTP}" != "true" ] && [ "${FTP_ERROR}" != "true" ]; then
   msg_step "Syncing to FTP: ${FTP_USER}@${FTP_DOMAIN}"
 
   safe_rsync \
-    "SRPMs -> FTP:${FTP_DIR}/${DISTRO}/${VERNUM}/SRPMS" \
+    "SRPMs -> FTP:${FTP_DIR}/${DISTRO}/${VERNUM}/sources" \
     "no" \
     "${HOST_SRPM_ROOT}" \
-    "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/SRPMS/" \
+    "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/sources/" \
     "-e" "ssh" "--chown=ftp:ftp"
 
   safe_rsync \
@@ -449,14 +459,14 @@ if [ "${SKIP_FTP}" != "true" ] && [ "${FTP_ERROR}" != "true" ]; then
     "no" \
     "${HOST_PKG_ROOT}/" \
     "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}/" \
-    "-e" "ssh" "--chown=ftp:ftp" "--exclude=srpms" "--exclude=debug" "--exclude=rpms"
+    "-e" "ssh" "--chown=ftp:ftp" "--exclude=sources" "--exclude=debug"
 
   safe_rsync \
     "PKGs (delete) -> FTP:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}" \
     "yes" \
     "${HOST_PKG_ROOT}/" \
     "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}/" \
-    "-e" "ssh" "--chown=ftp:ftp" "--exclude=addons" "--exclude=extras"
+    "-e" "ssh" "--chown=ftp:ftp" "--exclude=testing" "--exclude=empty"
 elif [ "${SKIP_FTP}" = "true" ]; then
   msg_info "FTP sync skipped (--skip-ftp)"
 fi
@@ -466,10 +476,10 @@ if [ "${SKIP_SOURCEFORGE}" != "true" ] && [ "${SOURCEFORGE_ERROR}" != "true" ]; 
   msg_step "Syncing to SourceForge web: ${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}"
 
   safe_rsync \
-    "SRPMs -> SF:htdocs/repo/${DISTRO}/${VERNUM}/SRPMS" \
+    "SRPMs -> SF:htdocs/repo/${DISTRO}/${VERNUM}/sources" \
     "no" \
     "${HOST_SRPM_ROOT}/" \
-    "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/SRPMS/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/sources/" \
     "-e" "ssh"
 
   safe_rsync \
@@ -477,14 +487,14 @@ if [ "${SKIP_SOURCEFORGE}" != "true" ] && [ "${SOURCEFORGE_ERROR}" != "true" ]; 
     "no" \
     "${HOST_PKG_ROOT}/" \
     "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}/" \
-    "-e" "ssh" "--exclude=srpms" "--exclude=debug" "--exclude=rpms"
+    "-e" "ssh" "--exclude=sources" "--exclude=debug"
 
   safe_rsync \
     "PKGs (delete) -> SF:htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}" \
     "yes" \
     "${HOST_PKG_ROOT}/" \
     "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}/" \
-    "-e" "ssh" "--exclude=addons" "--exclude=extras"
+    "-e" "ssh" "--exclude=testing" "--exclude=empty"
 
 elif [ "${SKIP_SOURCEFORGE}" = "true" ]; then
   msg_info "SourceForge sync skipped (--skip-sourceforge)"
@@ -506,14 +516,14 @@ if [ "${SKIP_SOURCEFORGE}" != "true" ] && [ "${SOURCEFORGE_ERROR}" != "true" ]; 
     "no" \
     "${HOST_PKG_ROOT}/" \
     "${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}:/home/frs/project/${SOURCEFORGE_PROJECT_NAME}/${DISTRO}/${VERNUM}/${ARCH}/" \
-    "-e" "ssh" "--exclude=srpms" "--exclude=debug" "--exclude=rpms"
+    "-e" "ssh" "--exclude=sources" "--exclude=debug"
 
   safe_rsync \
     "PKGs (delete) -> SF-FRS:${DISTRO}/${VERNUM}/${ARCH}" \
     "yes" \
     "${HOST_PKG_ROOT}/" \
     "${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}:/home/frs/project/${SOURCEFORGE_PROJECT_NAME}/${DISTRO}/${VERNUM}/${ARCH}/" \
-    "-e" "ssh" "--exclude=addons" "--exclude=extras"
+    "-e" "ssh" "--exclude=testing" "--exclude=empty"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 print_summary

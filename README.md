@@ -105,11 +105,15 @@ make-repo --skip-ftp --skip-sourceforge
 
 **Repo structure on SourceForge:**
 ```
-/RHEL/{VERSION}/{ARCH}/rpms/      - binary RPMs
+/RHEL/{VERSION}/{ARCH}/casjay/    - CasjaysDev packages
+/RHEL/{VERSION}/{ARCH}/os/        - upstream base OS
+/RHEL/{VERSION}/{ARCH}/langs/     - languages (PHP, Node.js)
+/RHEL/{VERSION}/{ARCH}/databases/ - databases (MariaDB, PostgreSQL, MongoDB)
+/RHEL/{VERSION}/{ARCH}/infra/     - infrastructure (Docker, Jenkins)
+/RHEL/{VERSION}/{ARCH}/extras/    - community extras (EPEL, RPM Fusion)
+/RHEL/{VERSION}/{ARCH}/kernel/    - ELRepo kernel
 /RHEL/{VERSION}/{ARCH}/debug/     - debuginfo RPMs
-/RHEL/{VERSION}/{ARCH}/addons/    - addon packages
-/RHEL/{VERSION}/{ARCH}/extras/    - extra packages
-/RHEL/{VERSION}/SRPMS/            - source RPMs
+/RHEL/{VERSION}/sources/          - source RPMs
 ```
 
 **Configuration:** `~/.config/rpm-devel/make-repo-settings.conf`
@@ -180,6 +184,52 @@ All configuration lives in `~/.config/rpm-devel/`:
 - **Target arches:** x86_64, aarch64 (via QEMU user-static)
 - **Target distros:** RHEL/AlmaLinux/Rocky/Oracle 7-10, Fedora 38+, CentOS 7+
 - **Build system:** COPR compatible
+
+## Repository layout
+
+All repos follow this directory structure on SourceForge FRS, local FTP, and local mirror:
+
+```
+RHEL/{VER}/{ARCH}/
+  casjay/         Our custom-built packages (rpm-devel specs)
+  testing/        Packages being tested before promotion to casjay/
+  os/             Upstream base OS (AlmaLinux baseos, appstream, crb, extras)
+  langs/          Programming languages (PHP via Remi, Node.js, Yarn)
+  databases/      Database servers (MariaDB, PostgreSQL, MongoDB)
+  infra/          Infrastructure tools (Docker, Jenkins, Webmin, Pritunl, Incus)
+  extras/         Community repos (EPEL, RPM Fusion, Ghettoforge)
+  kernel/         Kernel packages (ELRepo kernel, drivers)
+  debug/          All debuginfo and debugsource RPMs
+  empty/          Placeholder for arches/versions with no packages
+
+RHEL/{VER}/
+  sources/        All source RPMs (arch-independent)
+```
+
+### Repo section -> directory mapping
+
+| Category | Repo Sections | Mirror Dir |
+|----------|--------------|------------|
+| **CasjaysDev** | `casjay-packages` | `casjay/` |
+| **Testing** | `casjay-testing` | `testing/` |
+| **Base OS** | `casjay-os-base`, `casjay-os-appstream`, `casjay-os-crb`, `casjay-os-extras`, `casjay-os-plus`, `casjay-os-*` | `os/` |
+| **Languages** | `casjay-remi-*`, `casjay-nodejs`, `casjay-yarn` | `langs/` |
+| **Databases** | `casjay-mariadb`, `casjay-postgresql`, `casjay-mongodb` | `databases/` |
+| **Infrastructure** | `casjay-docker`, `casjay-jenkins`, `casjay-webmin`, `casjay-pritunl`, `casjay-copr-*`, `casjay-i2pd` | `infra/` |
+| **Extras** | `casjay-epel`, `casjay-rpmfusion-*`, `casjay-gf` | `extras/` |
+| **Kernel** | `casjay-elrepo`, `casjay-elrepo-kernel`, `casjay-elrepo-extras` | `kernel/` |
+| **Debug** | All `*-debuginfo-*`, `*-debugsource-*` | `debug/` |
+| **Sources** | All `*-srpm` repos | `sources/` |
+
+### Tool -> directory mapping
+
+| Tool | Writes To | Reads From |
+|------|-----------|------------|
+| `rpmbuild.sh` | `~/Documents/builds/rpmbuild/` (build output) | Spec files in `~/rpmbuild/` |
+| `make-repo` | `casjay/`, `debug/`, `sources/` + all createrepo | Build output from rpmbuild.sh |
+| `create-mirror` | `os/`, `langs/`, `databases/`, `infra/`, `extras/`, `kernel/` | Upstream repos |
+
+See [LAYOUT.md](LAYOUT.md) for the complete mapping reference.
 
 ## Related repos
 
