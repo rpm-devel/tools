@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck shell=bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-##@Version           :  202308172028-git
+##@Version           :  202604242000-git
 # @@Author           :  Jason Hempstead
 # @@Contact          :  git-admin@casjaysdev.pro
 # @@License          :  LICENSE.md
@@ -10,38 +10,66 @@
 # @@Created          :  Thursday, Aug 17, 2023 20:28 EDT
 # @@File             :  make-repo
 # @@Description      :  RPM release script
-# @@Changelog        :  newScript
-# @@TODO             :  Refactor code
+# @@Changelog        :  Robustness and error handling improvements
+# @@TODO             :
 # @@Other            :
 # @@Resource         :
 # @@Terminal App     :  no
 # @@sudo/root        :  no
 # @@Template         :  bash/system
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# shell check options
 # shellcheck disable=SC2317
 # shellcheck disable=SC2120
 # shellcheck disable=SC2155
 # shellcheck disable=SC2199
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 APPNAME="make-repo"
-VERSION="202202011344-git"
+VERSION="202604242000-git"
 USER="${SUDO_USER:-${USER}}"
 HOME="${USER_HOME:-${HOME}}"
 SRC_DIR="${BASH_SOURCE%/*}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Color definitions
+CLR_RESET="\033[0m"
+CLR_RED="\033[0;31m"
+CLR_GREEN="\033[0;32m"
+CLR_YELLOW="\033[0;33m"
+CLR_CYAN="\033[0;36m"
+CLR_BOLD="\033[1m"
+
+# Summary tracking
+SUMMARY_SYNCED=()
+SUMMARY_SKIPPED=()
+SUMMARY_FAILED=()
+SUMMARY_SIGNED=0
+SUMMARY_SIGN_SKIPPED=0
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Helpers
+msg_info()    { printf "${CLR_CYAN}[INFO]${CLR_RESET}  %s\n"    "$*"; }
+msg_ok()      { printf "${CLR_GREEN}[OK]${CLR_RESET}    %s\n"   "$*"; }
+msg_warn()    { printf "${CLR_YELLOW}[WARN]${CLR_RESET}  %s\n"  "$*"; }
+msg_error()   { printf "${CLR_RED}[ERROR]${CLR_RESET} %s\n"     "$*" >&2; }
+msg_step()    { printf "\n${CLR_BOLD}==> %s${CLR_RESET}\n"      "$*"; }
+msg_dry()     { printf "${CLR_YELLOW}[DRY]${CLR_RESET}   %s\n"  "$*"; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Set bash options
 if [[ "$1" == "--debug" ]]; then shift 1 && set -xo pipefail && export SCRIPT_OPTS="--debug" && export _DEBUG="on"; fi
 trap 'exitCode=${exitCode:-$?};[ -n "$MAKE_REPO_TEMP_FILE" ] && [ -f "$MAKE_REPO_TEMP_FILE" ] && rm -Rf "$MAKE_REPO_TEMP_FILE" &>/dev/null' EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Update path
 if [ "$1" = "update" ] || [ "$1" = "--update" ]; then
   SCRIPT_UPDATE="true"
   bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
   exitCode=$?
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Argument parsing
+SKIP_FTP="false"
+SKIP_SOURCEFORGE="false"
+DRY_RUN="false"
+
 SHORTOPTS="a:,n:,v:"
-LONGOPTS="version:,arch:,name:"
+LONGOPTS="version:,arch:,name:,dry-run,skip-ftp,skip-sourceforge,help"
 setopts=$(getopt -o "$SHORTOPTS" --long "$LONGOPTS" -n "$APPNAME" -- "$@" 2>/dev/null)
 eval set -- "${setopts[@]}" 2>/dev/null
 while :; do
@@ -57,6 +85,34 @@ while :; do
   -v | --version)
     SET_VERSION="$2"
     shift 2
+    ;;
+  --dry-run)
+    DRY_RUN="true"
+    shift 1
+    ;;
+  --skip-ftp)
+    SKIP_FTP="true"
+    shift 1
+    ;;
+  --skip-sourceforge)
+    SKIP_SOURCEFORGE="true"
+    shift 1
+    ;;
+  --help)
+    cat <<HELP
+Usage: ${APPNAME} [OPTIONS]
+
+  -a, --arch ARCH            Target architecture (default: $(uname -m))
+  -n, --name NAME            Distribution name (default: from rpmmacros or 'el')
+  -v, --version VERSION      Distribution version (default: from /etc/os-release)
+      --dry-run              Show what would be done without doing it
+      --skip-ftp             Skip FTP sync step
+      --skip-sourceforge     Skip SourceForge sync steps
+      --debug                Enable bash -x tracing
+      --help                 Show this help
+
+HELP
+    exit 0
     ;;
   --)
     shift 1
@@ -83,7 +139,7 @@ FTP_DIR="/var/ftp/pub/Casjay/repo"
 SOURCEFORGE_WEB_URL="web.sourceforge.net"
 SOURCEFORGE_FRS_URL="frs.sourceforge.net"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Developnment project name
+# Development project name
 SOURCEFORGE_PROJECT_NAME="rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Usernames
@@ -95,162 +151,379 @@ LOG_DIR="$HOME/Documents/builds/logs/rpmbuild"
 RPM_BUILD_CONFIG_FILE="${APPNAME}-settings.conf"
 RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Load existing settings file or create it with defaults only
 if [ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ]; then
   . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
 else
   mkdir -p "$RPM_BUILD_CONFIG_DIR"
-  cat <<EOF >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
-FTP_DOMAIN="${FTP_DOMAIN:-ftp.casjaysdev.pro}"
-FTP_DIR="${FTP_DIR:-/var/ftp/pub/Casjay/repo}"
+  cat <<'EOF' >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+# make-repo settings — edit these values, they will not be overwritten
+FTP_DOMAIN="ftp.casjaysdev.pro"
+FTP_DIR="/var/ftp/pub/Casjay/repo"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sourceforge Web urls
-SOURCEFORGE_WEB_URL="${SOURCEFORGE_WEB_URL:-web.sourceforge.net}"
-SOURCEFORGE_FRS_URL="${SOURCEFORGE_FRS_URL:-frs.sourceforge.net}"
+SOURCEFORGE_WEB_URL="web.sourceforge.net"
+SOURCEFORGE_FRS_URL="frs.sourceforge.net"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Developnment project name
-SOURCEFORGE_PROJECT_NAME="${SOURCEFORGE_PROJECT_NAME:-rpm-devel}"
+# Development project name
+SOURCEFORGE_PROJECT_NAME="rpm-devel"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Usernames
-FTP_USER="${FTP_USER:-}"
-SOURCEFORGE_USER="${SOURCEFORGE_USER:-}"
+FTP_USER=""
+SOURCEFORGE_USER=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Directories
-HOST_SRPM_ROOT="${HOST_SRPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/SRPMS}"
-# Arch will be added
-HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM}"
-HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM}"
+# Directories (ARCH will be appended to HOST_RPM_ROOT and HOST_PKG_ROOT at runtime)
+# HOST_SRPM_ROOT=""
+# HOST_RPM_ROOT=""
+# HOST_PKG_ROOT=""
 EOF
+  msg_info "Created settings file: $RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Directories
+# Directories — set after config load so config values take precedence
 HOST_SRPM_ROOT="${HOST_SRPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM/SRPMS}"
-# Add arch to Directories
+# Append arch after config load (avoids double-appending if HOST_RPM_ROOT was set in config without arch)
 HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM}/$ARCH"
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM}/$ARCH"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[ "$SCRIPT_UPDATE" = "true" ] && exit $exitCode
+[ "${SCRIPT_UPDATE:-}" = "true" ] && exit "${exitCode:-0}"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Resolve createrepo binary (prefer createrepo_c)
+if command -v createrepo_c &>/dev/null; then
+  CREATEREPO_BIN="createrepo_c"
+elif command -v createrepo &>/dev/null; then
+  CREATEREPO_BIN="createrepo"
+else
+  CREATEREPO_BIN=""
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Check required tools
+check_required_tools() {
+  local missing=0
+  for tool in rpm rsync ssh; do
+    if ! command -v "${tool}" &>/dev/null; then
+      msg_error "Required tool not found: ${tool}"
+      missing=$((missing + 1))
+    fi
+  done
+  if [ -z "${CREATEREPO_BIN}" ]; then
+    msg_error "Required tool not found: createrepo or createrepo_c"
+    missing=$((missing + 1))
+  fi
+  [ "${missing}" -gt 0 ] && return 1
+  return 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Safe rsync: only runs if source has at least one file matching the pattern.
+# Usage: safe_rsync <description> <use_delete> <src_glob_or_dir> <dest> [extra rsync args...]
+safe_rsync() {
+  local desc="$1"
+  local use_delete="$2"
+  local src="$3"
+  local dest="$4"
+  shift 4
+  local extra_args=("$@")
+
+  # Expand glob to check for actual files
+  local files
+  # Use find on directory sources, glob expansion for patterns
+  if [ -d "${src}" ]; then
+    files=$(find "${src}" -maxdepth 1 -type f 2>/dev/null | head -1)
+  else
+    # Glob expansion
+    local expanded
+    expanded=$(compgen -G "${src}" 2>/dev/null || true)
+    files="${expanded}"
+  fi
+
+  if [ -z "${files}" ]; then
+    msg_warn "Skipping rsync (no files): ${desc}"
+    SUMMARY_SKIPPED+=("${desc}")
+    return 0
+  fi
+
+  local delete_flag=()
+  [ "${use_delete}" = "yes" ] && delete_flag=("--delete")
+
+  if [ "${DRY_RUN}" = "true" ]; then
+    msg_dry "rsync ${delete_flag[*]:-} ${extra_args[*]:-} ${src} ${dest}"
+    SUMMARY_SYNCED+=("${desc} [dry-run]")
+    return 0
+  fi
+
+  if rsync --no-motd -aqhP "${delete_flag[@]}" "${extra_args[@]}" \
+      "${src}" "${dest}" \
+      2>>"/${LOG_DIR}/${RELEASE}-${VERNUM}-${ARCH}.err"; then
+    msg_ok "Synced: ${desc}"
+    SUMMARY_SYNCED+=("${desc}")
+  else
+    msg_error "Failed rsync: ${desc}"
+    SUMMARY_FAILED+=("${desc}")
+    return 1
+  fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Run createrepo on a directory if it exists
+run_createrepo() {
+  local label="$1"
+  local dir="$2"
+
+  [ ! -d "${dir}" ] && return 0
+
+  if [ "${DRY_RUN}" = "true" ]; then
+    msg_dry "${CREATEREPO_BIN} -q -d ${dir}"
+    return 0
+  fi
+
+  msg_info "Generating ${label} repo: ${dir}"
+  if (cd "${dir}" && "${CREATEREPO_BIN}" -q -d ./ \
+      >>"/${LOG_DIR}/${RELEASE}-${VERNUM}-${ARCH}.log" \
+      2>>"/${LOG_DIR}/${RELEASE}-${VERNUM}-${ARCH}.err"); then
+    msg_ok "${label} repo generated"
+  else
+    msg_error "createrepo failed for ${label}: ${dir}"
+    SUMMARY_FAILED+=("createrepo:${label}")
+  fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Print summary
+print_summary() {
+  printf "\n${CLR_BOLD}===== Summary =====${CLR_RESET}\n"
+  printf "  RPMs signed:    %d\n" "${SUMMARY_SIGNED}"
+  [ "${SUMMARY_SIGN_SKIPPED}" -gt 0 ] && \
+    printf "  Sign skipped:   %d (no RPMs found)\n" "${SUMMARY_SIGN_SKIPPED}"
+
+  if [ "${#SUMMARY_SYNCED[@]}" -gt 0 ]; then
+    printf "${CLR_GREEN}  Synced:${CLR_RESET}\n"
+    for s in "${SUMMARY_SYNCED[@]}"; do printf "    - %s\n" "${s}"; done
+  fi
+  if [ "${#SUMMARY_SKIPPED[@]}" -gt 0 ]; then
+    printf "${CLR_YELLOW}  Skipped (empty):${CLR_RESET}\n"
+    for s in "${SUMMARY_SKIPPED[@]}"; do printf "    - %s\n" "${s}"; done
+  fi
+  if [ "${#SUMMARY_FAILED[@]}" -gt 0 ]; then
+    printf "${CLR_RED}  Failed:${CLR_RESET}\n"
+    for s in "${SUMMARY_FAILED[@]}"; do printf "    - %s\n" "${s}"; done
+  fi
+  printf "${CLR_BOLD}===================${CLR_RESET}\n\n"
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 cat <<EOF
-DISTRO:         "$DISTRO"
-NAME:           "$VERNAME"
-VERSION:        "$VERNUM"
-ARCH:           "$ARCH"
-Source RPMS:    "$HOST_SRPM_ROOT"
-Binary RPMS:    "$HOST_RPM_ROOT"
-Release dir:    "$HOST_PKG_ROOT"
-Settings File:  "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+${CLR_BOLD}DISTRO:${CLR_RESET}         "${DISTRO}"
+${CLR_BOLD}NAME:${CLR_RESET}           "${VERNAME}"
+${CLR_BOLD}VERSION:${CLR_RESET}        "${VERNUM}"
+${CLR_BOLD}ARCH:${CLR_RESET}           "${ARCH}"
+${CLR_BOLD}Source RPMS:${CLR_RESET}    "${HOST_SRPM_ROOT}"
+${CLR_BOLD}Binary RPMS:${CLR_RESET}    "${HOST_RPM_ROOT}"
+${CLR_BOLD}Release dir:${CLR_RESET}    "${HOST_PKG_ROOT}"
+${CLR_BOLD}Settings:${CLR_RESET}       "${RPM_BUILD_CONFIG_DIR}/${RPM_BUILD_CONFIG_FILE}"
+${CLR_BOLD}createrepo:${CLR_RESET}     "${CREATEREPO_BIN:-NOT FOUND}"
+${CLR_BOLD}Dry-run:${CLR_RESET}        "${DRY_RUN}"
+${CLR_BOLD}Skip FTP:${CLR_RESET}       "${SKIP_FTP}"
+${CLR_BOLD}Skip SF:${CLR_RESET}        "${SKIP_SOURCEFORGE}"
 EOF
-sleep 5
+sleep 3
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-if [ -z "$FTP_USER" ]; then
-  FTP_ERROR="true"
-  echo "FTP USER is net set"
-fi
-if ! curl -q -LSsf -I "ftp://$FTP_DOMAIN" &>/dev/null; then
-  FTP_ERROR="true"
-  echo "Problem connecting to $FTP_DOMAIN"
-fi
-if [ -z "$SOURCEFORGE_USER" ]; then
-  SOURCEFORGE_ERROR="true"
-  echo "The variable SOURCEFORGE_USER needs to be set to your sourceforge user"
-fi
+# Validate required tools
+check_required_tools || { msg_error "Aborting: missing required tools"; exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Clean from previous builds
-echo "Cleaning Previous builds"
-rm -Rf "$HOST_PKG_ROOT/rpms"/*
-rm -Rf "$HOST_PKG_ROOT/debug"/*
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Make Directories
-echo "Creating Directories"
-mkdir -p "$LOG_DIR"
-mkdir -p "$HOST_SRPM_ROOT"
-mkdir -p "$HOST_PKG_ROOT/rpms"
-mkdir -p "$HOST_PKG_ROOT/debug"
-mkdir -p "$HOST_PKG_ROOT/addons"
-mkdir -p "$HOST_PKG_ROOT/extras"
-mkdir -p "$HOST_PKG_ROOT/empty"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Sign Packages
-echo "Signing the Packages"
-rpm --addsign --quiet --quiet --quiet "$HOST_SRPM_ROOT"/*.rpm "$HOST_RPM_ROOT"/*/*.rpm "$HOST_RPM_ROOT"/*/*/*.rpm 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Move RPMs to appropriate Directories
-echo "Moving SRPMS"
-rsync --no-motd -aqhP --delete "$HOST_RPM_ROOT"/**/*.src.rpm "$HOST_SRPM_ROOT/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-# [ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT to $HOST_SRPM_ROOT" && exit 1
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-echo "Moving Debug RPMS"
-rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/**/*debugsource*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
-  rsync --no-motd -aqhP "$HOST_RPM_ROOT"/rpms/**/*debuginfo*.rpm "$HOST_PKG_ROOT/debug/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/**/ to $HOST_PKG_ROOT/debug" && exit 1
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-echo "Moving RPMS"
-rsync --no-motd -aqhP --delete --exclude=*debuginfo* --exclude=*debugsource* "$HOST_RPM_ROOT"/rpms/**/*.rpm "$HOST_PKG_ROOT/rpms/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-[ $? -ne 0 ] && echo "Failed to move files from $HOST_RPM_ROOT/rpms/**/ to $HOST_PKG_ROOT/rpms" && exit 1
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Create repos
-if [ -d "$HOST_SRPM_ROOT" ]; then
-  echo "Generating SRPMS REPO: $HOST_SRPM_ROOT"
-  cd "$HOST_SRPM_ROOT" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
-fi
-if [ -d "$HOST_PKG_ROOT/empty" ]; then
-  echo "Generating Addons REPO: $HOST_PKG_ROOT/empty"
-  cd "$HOST_PKG_ROOT/addons" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
-fi
-if [ -d "$HOST_PKG_ROOT/addons" ]; then
-  echo "Generating Addons REPO: $HOST_PKG_ROOT/addons"
-  cd "$HOST_PKG_ROOT/addons" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
-fi
-if [ -d "$HOST_PKG_ROOT/extras" ]; then
-  echo "Generating Extras REPO: $HOST_PKG_ROOT/extras"
-  cd "$HOST_PKG_ROOT/extras" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
-fi
-if [ -d "$HOST_PKG_ROOT/debug" ]; then
-  echo "Generating DEBUG REPO: $HOST_PKG_ROOT/debug"
-  cd "$HOST_PKG_ROOT/debug" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
-fi
-if [ -d "$HOST_PKG_ROOT/rpms" ]; then
-  echo "Generating RPMS REPO: $HOST_PKG_ROOT/rpms"
-  cd "$HOST_PKG_ROOT/rpms" && createrepo -q -d ./ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" >>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.log"
+# Validate FTP connectivity (unless skipped)
+FTP_ERROR="false"
+if [ "${SKIP_FTP}" != "true" ]; then
+  if [ -z "${FTP_USER}" ]; then
+    FTP_ERROR="true"
+    msg_warn "FTP_USER is not set — FTP sync will be skipped"
+  fi
+  if ! curl -q -LSsf -I "ftp://${FTP_DOMAIN}" &>/dev/null; then
+    FTP_ERROR="true"
+    msg_warn "Cannot reach ${FTP_DOMAIN} — FTP sync will be skipped"
+  fi
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Sync to locale FTP Server
-if [ "$FTP_ERROR" != "true" ]; then
-  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS"
-  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp "$HOST_SRPM_ROOT""/* $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-  [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/SRPMS" && exit 1
-  echo "Sending Locally: $FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH"
-  rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
-    rsync --no-motd -aqhP -e ssh --chown=ftp:ftp --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$FTP_USER@$FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-  [ $? -ne 0 ] && echo "Failed to move files from $HOST_PKG_ROOT to $FTP_DOMAIN:$FTP_DIR/$DISTRO/$VERNUM/$ARCH" && exit 1
+# Validate SourceForge config (unless skipped)
+SOURCEFORGE_ERROR="false"
+if [ "${SKIP_SOURCEFORGE}" != "true" ]; then
+  if [ -z "${SOURCEFORGE_USER}" ]; then
+    SOURCEFORGE_ERROR="true"
+    msg_warn "SOURCEFORGE_USER is not set — SourceForge sync will be skipped"
+  fi
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Sync to website
-if [ "$SOURCEFORGE_ERROR" != "true" ]; then
-  echo "$SOURCEFORGE_USER is Sending to website: $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS"
-  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-  [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/SRPMS" && exit 1
-  echo "$SOURCEFORGE_USER is Sending to website: $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH"
-  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
-    rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-  [ $? -ne 0 ] && echo "Failed to move files from $HOST_PKG_ROOT to $SOURCEFORGE_WEB_URL:/home/project-web/$SOURCEFORGE_PROJECT_NAME/htdocs/repo/$DISTRO/$VERNUM/$ARCH" && exit 1
+msg_step "Cleaning previous staging output"
+if [ "${DRY_RUN}" = "true" ]; then
+  msg_dry "rm -Rf ${HOST_PKG_ROOT}/rpms/* ${HOST_PKG_ROOT}/debug/*"
+else
+  rm -Rf "${HOST_PKG_ROOT}/rpms"/* 2>/dev/null || true
+  rm -Rf "${HOST_PKG_ROOT}/debug"/* 2>/dev/null || true
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+msg_step "Creating directories"
+if [ "${DRY_RUN}" = "true" ]; then
+  msg_dry "mkdir -p ${LOG_DIR} ${HOST_SRPM_ROOT} ${HOST_PKG_ROOT}/{rpms,debug,addons,extras,empty}"
+else
+  mkdir -p "${LOG_DIR}"
+  mkdir -p "${HOST_SRPM_ROOT}"
+  mkdir -p "${HOST_PKG_ROOT}/rpms"
+  mkdir -p "${HOST_PKG_ROOT}/debug"
+  mkdir -p "${HOST_PKG_ROOT}/addons"
+  mkdir -p "${HOST_PKG_ROOT}/extras"
+  mkdir -p "${HOST_PKG_ROOT}/empty"
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+msg_step "Signing packages"
+# Collect RPM paths that actually exist, avoiding empty-glob errors
+rpm_to_sign=()
+while IFS= read -r -d '' f; do
+  rpm_to_sign+=("${f}")
+done < <(find "${HOST_SRPM_ROOT}" "${HOST_RPM_ROOT}" -maxdepth 3 -name "*.rpm" -print0 2>/dev/null)
+
+if [ "${#rpm_to_sign[@]}" -eq 0 ]; then
+  msg_warn "No RPMs found to sign"
+  SUMMARY_SIGN_SKIPPED=1
+else
+  SUMMARY_SIGNED="${#rpm_to_sign[@]}"
+  if [ "${DRY_RUN}" = "true" ]; then
+    msg_dry "rpm --addsign --quiet ${#rpm_to_sign[@]} RPM(s)"
+  else
+    msg_info "Signing ${#rpm_to_sign[@]} RPM(s)"
+    if ! rpm --addsign --quiet --quiet --quiet "${rpm_to_sign[@]}" \
+        2>>"/${LOG_DIR}/${RELEASE}-${VERNUM}-${ARCH}.err"; then
+      msg_warn "rpm --addsign reported errors (see log)"
+    else
+      msg_ok "All RPMs signed"
+    fi
+  fi
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+msg_step "Moving SRPMs"
+safe_rsync \
+  "SRPMs -> ${HOST_SRPM_ROOT}" \
+  "no" \
+  "${HOST_RPM_ROOT}/**/*.src.rpm" \
+  "${HOST_SRPM_ROOT}/"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+msg_step "Moving debug RPMs"
+safe_rsync \
+  "debug (debugsource) -> ${HOST_PKG_ROOT}/debug" \
+  "no" \
+  "${HOST_RPM_ROOT}/rpms/**/*debugsource*.rpm" \
+  "${HOST_PKG_ROOT}/debug/"
+
+safe_rsync \
+  "debug (debuginfo) -> ${HOST_PKG_ROOT}/debug" \
+  "no" \
+  "${HOST_RPM_ROOT}/rpms/**/*debuginfo*.rpm" \
+  "${HOST_PKG_ROOT}/debug/"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+msg_step "Moving binary RPMs"
+safe_rsync \
+  "RPMs -> ${HOST_PKG_ROOT}/rpms" \
+  "yes" \
+  "${HOST_RPM_ROOT}/rpms/**/*.rpm" \
+  "${HOST_PKG_ROOT}/rpms/" \
+  "--exclude=*debuginfo*" "--exclude=*debugsource*"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+msg_step "Generating repositories"
+run_createrepo "SRPMS"   "${HOST_SRPM_ROOT}"
+run_createrepo "empty"   "${HOST_PKG_ROOT}/empty"
+run_createrepo "addons"  "${HOST_PKG_ROOT}/addons"
+run_createrepo "extras"  "${HOST_PKG_ROOT}/extras"
+run_createrepo "debug"   "${HOST_PKG_ROOT}/debug"
+run_createrepo "rpms"    "${HOST_PKG_ROOT}/rpms"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Sync to local FTP server
+if [ "${SKIP_FTP}" != "true" ] && [ "${FTP_ERROR}" != "true" ]; then
+  msg_step "Syncing to FTP: ${FTP_USER}@${FTP_DOMAIN}"
+
+  safe_rsync \
+    "SRPMs -> FTP:${FTP_DIR}/${DISTRO}/${VERNUM}/SRPMS" \
+    "no" \
+    "${HOST_SRPM_ROOT}" \
+    "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/SRPMS/" \
+    "-e" "ssh" "--chown=ftp:ftp"
+
+  safe_rsync \
+    "PKGs (no-delete) -> FTP:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}" \
+    "no" \
+    "${HOST_PKG_ROOT}/" \
+    "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh" "--chown=ftp:ftp" "--exclude=srpms" "--exclude=debug" "--exclude=rpms"
+
+  safe_rsync \
+    "PKGs (delete) -> FTP:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}" \
+    "yes" \
+    "${HOST_PKG_ROOT}/" \
+    "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh" "--chown=ftp:ftp" "--exclude=addons" "--exclude=extras"
+elif [ "${SKIP_FTP}" = "true" ]; then
+  msg_info "FTP sync skipped (--skip-ftp)"
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Sync to SourceForge web (htdocs)
+if [ "${SKIP_SOURCEFORGE}" != "true" ] && [ "${SOURCEFORGE_ERROR}" != "true" ]; then
+  msg_step "Syncing to SourceForge web: ${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}"
+
+  safe_rsync \
+    "SRPMs -> SF:htdocs/repo/${DISTRO}/${VERNUM}/SRPMS" \
+    "no" \
+    "${HOST_SRPM_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/SRPMS/" \
+    "-e" "ssh"
+
+  safe_rsync \
+    "PKGs (no-delete) -> SF:htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}" \
+    "no" \
+    "${HOST_PKG_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh" "--exclude=srpms" "--exclude=debug" "--exclude=rpms"
+
+  safe_rsync \
+    "PKGs (delete) -> SF:htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}" \
+    "yes" \
+    "${HOST_PKG_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh" "--exclude=addons" "--exclude=extras"
+
+elif [ "${SKIP_SOURCEFORGE}" = "true" ]; then
+  msg_info "SourceForge sync skipped (--skip-sourceforge)"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to frs.sourceforge.net
-if [ "$SOURCEFORGE_ERROR" != "true" ]; then
-  echo "$SOURCEFORGE_USER is Sending to FRS site: $SOURCEFORGE_WEB_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/SRPMS"
-  rsync --no-motd -aqhP -e ssh "$HOST_SRPM_ROOT"/* $SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/ 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-  [ $? -ne 0 ] && echo "Failed to move files from $HOST_SRPM_ROOT to $SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM" && exit 1
-  echo "$SOURCEFORGE_USER is Sending to FRS site: $SOURCEFORGE_WEB_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH"
-  rsync --no-motd -aqhP -e ssh --exclude=srpms,debug,rpms "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err" &&
-    rsync --no-motd -aqhP -e ssh --delete --exclude=addons,extras "$HOST_PKG_ROOT"/* "$SOURCEFORGE_USER@$SOURCEFORGE_FRS_URL:/home/frs/project/$SOURCEFORGE_PROJECT_NAME/$DISTRO/$VERNUM/$ARCH/" 2>>/"$LOG_DIR/$RELEASE-$VERNUM-$ARCH.err"
-  [ $? -ne 0 ] && echo "Failed to move files from $ to $" && exit 1
+if [ "${SKIP_SOURCEFORGE}" != "true" ] && [ "${SOURCEFORGE_ERROR}" != "true" ]; then
+  msg_step "Syncing to SourceForge FRS: ${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}"
+
+  safe_rsync \
+    "SRPMs -> SF-FRS:${DISTRO}/${VERNUM}" \
+    "no" \
+    "${HOST_SRPM_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}:/home/frs/project/${SOURCEFORGE_PROJECT_NAME}/${DISTRO}/${VERNUM}/" \
+    "-e" "ssh"
+
+  safe_rsync \
+    "PKGs (no-delete) -> SF-FRS:${DISTRO}/${VERNUM}/${ARCH}" \
+    "no" \
+    "${HOST_PKG_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}:/home/frs/project/${SOURCEFORGE_PROJECT_NAME}/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh" "--exclude=srpms" "--exclude=debug" "--exclude=rpms"
+
+  safe_rsync \
+    "PKGs (delete) -> SF-FRS:${DISTRO}/${VERNUM}/${ARCH}" \
+    "yes" \
+    "${HOST_PKG_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}:/home/frs/project/${SOURCEFORGE_PROJECT_NAME}/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh" "--exclude=addons" "--exclude=extras"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-echo "The script has completed"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-exit
+print_summary
+
+if [ "${#SUMMARY_FAILED[@]}" -gt 0 ]; then
+  msg_error "Completed with ${#SUMMARY_FAILED[@]} failure(s)"
+  exit 1
+fi
+
+msg_ok "Script completed successfully"
+exit 0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # end

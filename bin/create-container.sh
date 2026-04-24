@@ -98,6 +98,8 @@ __help() {
   __printf_line "7                  - Build version 7 for PLATFORM"
   __printf_line "8                  - Build version 8 for PLATFORM"
   __printf_line "9                  - Build version 9 for PLATFORM"
+  __printf_line "10                 - Build version 10 for PLATFORM"
+  __printf_line "fedora             - Build Fedora $FEDORA_VERSION for PLATFORM"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
   __printf_opts "Other Options"
   __printf_head "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
@@ -121,6 +123,11 @@ REGISTRY_IMAGE_NAME="${REGISTRY_IMAGE_NAME:-almalinux}"
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
 ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
+ENABLE_VERSION_10="${ENABLE_VERSION_10:-yes}"
+# Fedora settings
+ENABLE_FEDORA="${ENABLE_FEDORA:-yes}"
+FEDORA_VERSION="${FEDORA_VERSION:-42}"
+FEDORA_IMAGE_NAME="${FEDORA_IMAGE_NAME:-fedora}"
 # Set container name prefix - default: [rpmdev8-arch]
 CONTAINER_PREFIX_NAME="rpmdev"
 # Set Home Directories
@@ -157,11 +164,14 @@ __list_images() {
 List of images available for arm64
 $REGISTRY_IMAGE_NAME 8 arm64
 $REGISTRY_IMAGE_NAME 9 arm64
+$REGISTRY_IMAGE_NAME 10 arm64
+$FEDORA_IMAGE_NAME $FEDORA_VERSION arm64
 List of images available for amd64
 $REGISTRY_IMAGE_NAME 7 amd64
 $REGISTRY_IMAGE_NAME 8 amd64
 $REGISTRY_IMAGE_NAME 9 amd64
-TODO - Add fedora support
+$REGISTRY_IMAGE_NAME 10 amd64
+$FEDORA_IMAGE_NAME $FEDORA_VERSION amd64
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -249,6 +259,9 @@ __setup_build() {
   if [ "$SET_VERSION" = '9' ] && [ "$PLATFORM" = "amd64" ]; then
     echo "$CPU_CHECK" | grep -q 'x86-64-v2' || { echo "CPU does not support x86-64-v2" && return 1; }
   fi
+  if [ "$SET_VERSION" = '10' ] && [ "$PLATFORM" = "amd64" ]; then
+    echo "$CPU_CHECK" | grep -q 'x86-64-v2' || { echo "CPU does not support x86-64-v2" && return 1; }
+  fi
   # check if the container is running
   if docker ps -a 2>&1 | grep -q "$CONTAINER_NAME"; then
     CONTAINER_EXISTS="true"
@@ -256,7 +269,7 @@ __setup_build() {
     CONTAINER_EXISTS="false"
   fi
   # Get development package lists
-  for f in 7 8 9; do
+  for f in 7 8 9 10; do
     ret_file="$HOME/.config/rpm-devel/lists/$f.txt"
     ret_url="https://github.com/rpm-devel/tools/raw/main/packages/$f.txt"
     [ -d "$ret_file" ] && rm -Rf "$ret_file"
@@ -401,6 +414,11 @@ PLATFORM="arm64"
 ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
 ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
 ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
+ENABLE_VERSION_10="${ENABLE_VERSION_10:-yes}"
+# Fedora settings
+ENABLE_FEDORA="${ENABLE_FEDORA:-yes}"
+FEDORA_VERSION="${FEDORA_VERSION:-42}"
+FEDORA_IMAGE_NAME="${FEDORA_IMAGE_NAME:-fedora}"
 CONTAINER_PREFIX_NAME="${CONTAINER_PREFIX_NAME:-rpmdev}"
 # Set Home Directories
 HOST_HOME_DIR="${HOST_HOME_DIR:-$HOME}"
@@ -446,7 +464,7 @@ SHORTOPTS+=""
 LONGOPTS="completions:,config,debug,help,options,raw,version"
 LONGOPTS+=",remove,platform,update,enter,image:"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-ARRAY="all arm amd 7 8 9 "
+ARRAY="all arm amd 7 8 9 10 fedora "
 ARRAY+=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 LIST=""
@@ -578,6 +596,18 @@ all)
   else
     echo "Version 9 is disabled"
   fi
+  if [ "$ENABLE_VERSION_10" = "yes" ]; then
+    __setup_build "$REGISTRY_IMAGE_NAME" "10" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "10" "amd64"
+  else
+    echo "Version 10 is disabled"
+  fi
+  if [ "$ENABLE_FEDORA" = "yes" ]; then
+    __setup_build "$FEDORA_IMAGE_NAME" "$FEDORA_VERSION" "arm64"
+    __setup_build "$FEDORA_IMAGE_NAME" "$FEDORA_VERSION" "amd64"
+  else
+    echo "Fedora is disabled"
+  fi
   ;;
 
 arm)
@@ -586,6 +616,8 @@ arm)
   [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "arm64" || echo "Version 7 is disabled"
   [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "arm64" || echo "Version 8 is disabled"
   [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "arm64" || echo "Version 9 is disabled"
+  [ "$ENABLE_VERSION_10" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "10" "arm64" || echo "Version 10 is disabled"
+  [ "$ENABLE_FEDORA" = "yes" ] && __setup_build "$FEDORA_IMAGE_NAME" "$FEDORA_VERSION" "arm64" || echo "Fedora is disabled"
   ;;
 
 amd)
@@ -594,6 +626,8 @@ amd)
   [ "$ENABLE_VERSION_7" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "7" "amd64" || echo "Version 7 is disabled"
   [ "$ENABLE_VERSION_8" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "8" "amd64" || echo "Version 8 is disabled"
   [ "$ENABLE_VERSION_9" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "9" "amd64" || echo "Version 9 is disabled"
+  [ "$ENABLE_VERSION_10" = "yes" ] && __setup_build "$REGISTRY_IMAGE_NAME" "10" "amd64" || echo "Version 10 is disabled"
+  [ "$ENABLE_FEDORA" = "yes" ] && __setup_build "$FEDORA_IMAGE_NAME" "$FEDORA_VERSION" "amd64" || echo "Fedora is disabled"
   ;;
 
 7)
@@ -628,6 +662,30 @@ amd)
   else
     __setup_build "$REGISTRY_IMAGE_NAME" "9" "arm64"
     __setup_build "$REGISTRY_IMAGE_NAME" "9" "amd64"
+  fi
+  exit
+  ;;
+
+10)
+  shift 1
+  ENTER_CONTAINER="false"
+  if [ -n "$1" ]; then
+    __setup_build "$REGISTRY_IMAGE_NAME" "10" "${1:-$PLATFORM}"
+  else
+    __setup_build "$REGISTRY_IMAGE_NAME" "10" "arm64"
+    __setup_build "$REGISTRY_IMAGE_NAME" "10" "amd64"
+  fi
+  exit
+  ;;
+
+fedora)
+  shift 1
+  ENTER_CONTAINER="false"
+  if [ -n "$1" ]; then
+    __setup_build "$FEDORA_IMAGE_NAME" "$FEDORA_VERSION" "${1:-$PLATFORM}"
+  else
+    __setup_build "$FEDORA_IMAGE_NAME" "$FEDORA_VERSION" "arm64"
+    __setup_build "$FEDORA_IMAGE_NAME" "$FEDORA_VERSION" "amd64"
   fi
   exit
   ;;

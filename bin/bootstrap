@@ -1,7 +1,7 @@
-#!/usr/bin/env sh
-# shellcheck shell=sh
+#!/usr/bin/env bash
+# shellcheck shell=bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-##@Version           :  202308180342-git
+##@Version           :  202604240000-git
 # @@Author           :  Jason Hempstead
 # @@Contact          :  jason@casjaysdev.pro
 # @@License          :  LICENSE.md
@@ -10,62 +10,288 @@
 # @@Created          :  Friday, Aug 18, 2023 03:42 EDT
 # @@File             :  bootstrap
 # @@Description      :  Bootstrap rpm dev container
-# @@Changelog        :  New script
+# @@Changelog        :  Better error handling, pkg manager detection, skel safety
 # @@TODO             :  Better documentation
 # @@Other            :
 # @@Resource         :
 # @@Terminal App     :  no
-# @@sudo/root        :  no
-# @@Template         :  shell/sh
+# @@sudo/root        :  yes
+# @@Template         :  shell/bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# shellcheck disable=SC2016
-# shellcheck disable=SC2031
-# shellcheck disable=SC2120
-# shellcheck disable=SC2155
-# shellcheck disable=SC2199
-# shellcheck disable=SC2317
+set -euo pipefail
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 APPNAME="$(basename "$0" 2>/dev/null)"
-VERSION="202308180342-git"
-RUN_USER="$USER"
+VERSION="202604240000-git"
+RUN_USER="${USER:-root}"
 SET_UID="$(id -u)"
 SCRIPT_SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
-BOOTSTRAP_CWD="$(realpath "$PWD")"
+BOOTSTRAP_CWD="$(realpath "${PWD}")"
+BOOTSTRAP_EXIT_STATUS=0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# colorization
-if [ "$SHOW_RAW" = "true" ]; then
-  __printf_color() { printf '%b' "$1\n" | tr -d '\t' | sed '/^%b$/d;s,\x1B\[ 0-9;]*[a-zA-Z],,g'; }
+# Color definitions (tput with fallback)
+if [ -t 1 ] && [ "${SHOW_RAW:-false}" != "true" ]; then
+  C_RED="$(tput setaf 1 2>/dev/null || true)"
+  C_GRN="$(tput setaf 2 2>/dev/null || true)"
+  C_YLW="$(tput setaf 3 2>/dev/null || true)"
+  C_BLU="$(tput setaf 4 2>/dev/null || true)"
+  C_CYN="$(tput setaf 6 2>/dev/null || true)"
+  C_WHT="$(tput setaf 7 2>/dev/null || true)"
+  C_RST="$(tput sgr0    2>/dev/null || true)"
 else
-  __printf_color() { { [ -z "$2" ] || DEFAULT_COLOR=$2; } && printf "%b" "$(tput setaf "$DEFAULT_COLOR" 2>/dev/null)" "$1\n" "$(tput sgr0 2>/dev/null)"; }
+  C_RED="" C_GRN="" C_YLW="" C_BLU="" C_CYN="" C_WHT="" C_RST=""
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# check for command
-__cmd_exists() { which $1 >/dev/null 2>&1 || return 1; }
-__function_exists() { builtin type $1 >/dev/null 2>&1 || return 1; }
+# Logging helpers
+info()    { printf '%s[INFO]%s  %s\n'  "${C_BLU}" "${C_RST}" "$*"; }
+ok()      { printf '%s[OK]%s    %s\n'  "${C_GRN}" "${C_RST}" "$*"; }
+warn()    { printf '%s[WARN]%s  %s\n'  "${C_YLW}" "${C_RST}" "$*" >&2; }
+error()   { printf '%s[ERROR]%s %s\n'  "${C_RED}" "${C_RST}" "$*" >&2; }
+die()     { error "$*"; exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# custom functions
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Define variables
-DEFAULT_COLOR="254"
-BOOTSTRAP_EXIT_STATUS=0
-RPM_PACKAGES="bash git rpmbuild"
+# Variables
 URL_RPM_MACROS="https://github.com/rpm-devel/tools/raw/main/.rpmmacros"
-URL_TOOLS_INTALLER="https://github.com/rpm-devel/tools/raw/main/install.sh"
+URL_TOOLS_INSTALLER="https://github.com/rpm-devel/tools/raw/main/install.sh"
+
+# Packages common across all supported distros (RPM names; apt names handled separately)
+RPM_PACKAGES_BASE="bash git curl wget make"
+RPM_PACKAGES_BUILD="rpm-build rpm-sign rpmdevtools spectool"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Main application
+# usage
+__usage() {
+  cat <<EOF
+Usage: ${APPNAME} [OPTIONS]
+
+Bootstrap an RPM development container.
+
+Options:
+  -h, --help      Show this help message and exit
+  -v, --version   Show version and exit
+  --no-skel       Skip copying /etc/skel files
+  --no-macros     Skip downloading .rpmmacros
+  --packages FILE Read additional package names from FILE (one per line)
+
+EOF
+  exit 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Detect the system package manager; sets PKG_MGR and PKG_TYPE (rpm|deb)
+__detect_pkg_mgr() {
+  if command -v dnf >/dev/null 2>&1; then
+    PKG_MGR="dnf"
+    PKG_TYPE="rpm"
+  elif command -v yum >/dev/null 2>&1; then
+    PKG_MGR="yum"
+    PKG_TYPE="rpm"
+  elif command -v apt-get >/dev/null 2>&1; then
+    PKG_MGR="apt-get"
+    PKG_TYPE="deb"
+  else
+    die "No supported package manager found (dnf, yum, apt-get)"
+  fi
+  ok "Package manager: ${PKG_MGR} (${PKG_TYPE})"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Return the distro-appropriate package name for RPM build tools
+__rpm_build_packages() {
+  # rpmdevtools ships spectool on EL<10 and Fedora; on EL10 spectool is
+  # a standalone package called spectool (same name, different source).
+  # rpm-sign may be split out on some distros — include it unconditionally
+  # and let the package manager ignore it if it is a virtual/pulled dep.
+  local rhel_ver=""
+  [ -f /etc/os-release ] && rhel_ver="$(. /etc/os-release; echo "${VERSION_ID:-0}" | cut -d. -f1)"
+
+  if [ "${PKG_TYPE}" = "deb" ]; then
+    # Debian/Ubuntu equivalents (best-effort)
+    echo "rpm rpmlint devscripts"
+    return
+  fi
+
+  # RPM-based
+  local pkgs="${RPM_PACKAGES_BUILD}"
+
+  # Fedora 38+ renamed some sub-packages; rpmdevtools pulls them in anyway
+  # EL10 dropped some legacy compat — add redhat-rpm-config explicitly
+  if [ -f /etc/fedora-release ] || { [ -n "${rhel_ver}" ] && [ "${rhel_ver}" -ge 10 ] 2>/dev/null; }; then
+    pkgs="${pkgs} redhat-rpm-config"
+  fi
+
+  echo "${pkgs}"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Run a package manager update
+__pkg_update() {
+  info "Updating package index..."
+  case "${PKG_MGR}" in
+    dnf|yum)
+      "${PKG_MGR}" makecache -q || warn "Package cache update failed (continuing)"
+      ;;
+    apt-get)
+      "${PKG_MGR}" update -qq || warn "apt-get update failed (continuing)"
+      ;;
+  esac
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Install a list of packages; skip already-installed ones
+__pkg_install() {
+  local pkgs="$*"
+  [ -z "${pkgs}" ] && return 0
+
+  info "Installing packages: ${pkgs}"
+  case "${PKG_MGR}" in
+    dnf|yum)
+      "${PKG_MGR}" install -y -q ${pkgs} || {
+        error "Package install failed for: ${pkgs}"
+        BOOTSTRAP_EXIT_STATUS=1
+        return 1
+      }
+      ;;
+    apt-get)
+      DEBIAN_FRONTEND=noninteractive "${PKG_MGR}" install -y -qq ${pkgs} || {
+        error "Package install failed for: ${pkgs}"
+        BOOTSTRAP_EXIT_STATUS=1
+        return 1
+      }
+      ;;
+  esac
+  ok "Packages installed."
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Install packages from a file (one package per line, # comments allowed)
+__pkg_install_file() {
+  local file="$1"
+  [ -f "${file}" ] || { warn "Package list file not found: ${file}"; return 0; }
+
+  local pkgs
+  pkgs="$(grep -v '^\s*#' "${file}" | grep -v '^\s*$' | tr '\n' ' ')"
+  [ -z "${pkgs}" ] && { info "Package file ${file} is empty, skipping."; return 0; }
+
+  info "Installing packages from ${file}..."
+  __pkg_install ${pkgs}
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Copy /etc/skel files to /root, skipping any that already exist
+__copy_skel() {
+  [ -d /etc/skel ] || { warn "/etc/skel not found, skipping skel copy."; return 0; }
+
+  info "Copying /etc/skel files to /root (skipping existing files)..."
+  local copied=0
+  local skipped=0
+  while IFS= read -r -d '' src; do
+    rel="${src#/etc/skel/}"
+    dst="/root/${rel}"
+    if [ -e "${dst}" ]; then
+      skipped=$((skipped + 1))
+    else
+      # Create parent directory if needed
+      dst_dir="$(dirname "${dst}")"
+      mkdir -p "${dst_dir}"
+      cp -a "${src}" "${dst}"
+      copied=$((copied + 1))
+    fi
+  done < <(find /etc/skel -mindepth 1 -maxdepth 3 -not -type d -print0 2>/dev/null)
+
+  ok "Skel copy: ${copied} copied, ${skipped} already existed (skipped)."
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Download .rpmmacros to $HOME if not already present, or if --force-macros
+__setup_rpmmacros() {
+  local dest="${HOME}/.rpmmacros"
+  local downloader=""
+
+  if command -v curl >/dev/null 2>&1; then
+    downloader="curl -fsSL"
+  elif command -v wget >/dev/null 2>&1; then
+    downloader="wget -qO-"
+  else
+    warn "Neither curl nor wget found; cannot download .rpmmacros"
+    return 1
+  fi
+
+  if [ -f "${dest}" ] && [ "${FORCE_MACROS:-false}" != "true" ]; then
+    info "${dest} already exists; skipping download (use --force-macros to overwrite)."
+    return 0
+  fi
+
+  info "Downloading .rpmmacros from ${URL_RPM_MACROS}..."
+  if ${downloader} "${URL_RPM_MACROS}" >"${dest}.tmp"; then
+    mv "${dest}.tmp" "${dest}"
+    ok ".rpmmacros installed at ${dest}"
+  else
+    rm -f "${dest}.tmp"
+    warn "Failed to download .rpmmacros (non-fatal)."
+    return 1
+  fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Run rpmdev-setuptree to create ~/rpmbuild structure
+__setup_rpmbuild_tree() {
+  if command -v rpmdev-setuptree >/dev/null 2>&1; then
+    info "Running rpmdev-setuptree..."
+    rpmdev-setuptree && ok "rpmbuild directory tree ready." || warn "rpmdev-setuptree failed."
+  else
+    warn "rpmdev-setuptree not found; creating rpmbuild dirs manually."
+    for d in BUILD BUILDROOT RPMS SOURCES SPECS SRPMS; do
+      mkdir -p "${HOME}/rpmbuild/${d}"
+    done
+    ok "rpmbuild directory tree created manually."
+  fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Parse arguments
+OPT_NO_SKEL=false
+OPT_NO_MACROS=false
+OPT_PKG_FILE="/tmp/pkgs.txt"
+FORCE_MACROS=false
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help)    __usage ;;
+    -v|--version) echo "${APPNAME} ${VERSION}"; exit 0 ;;
+    --no-skel)    OPT_NO_SKEL=true ;;
+    --no-macros)  OPT_NO_MACROS=true ;;
+    --force-macros) FORCE_MACROS=true ;;
+    --packages)
+      shift
+      [ -z "${1:-}" ] && die "--packages requires a file path argument"
+      OPT_PKG_FILE="$1"
+      ;;
+    *) warn "Unknown option: $1"; __usage ;;
+  esac
+  shift
+done
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Enforce root
+if [ "${SET_UID}" -ne 0 ]; then
+  die "This script must be run as root (current user: ${RUN_USER})"
+fi
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Write PID file
 echo "$$" >"/tmp/bootstrap.pid"
-pkmgr update
-pkmgr install $RPM_PACKAGES
-pkmgr install "/tmp/pkgs.txt"
-cp -Rf "/etc/skel/." "/root/"
-[ -f "/tmp/bootstrap" ] && rm -Rf "/tmp/bootstrap"
-[ -f "/tmp/tools-install" ] && rm -Rf "/tmp/tools-install"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# End application
+# Main
+info "Starting ${APPNAME} ${VERSION}"
+
+__detect_pkg_mgr
+__pkg_update
+__pkg_install ${RPM_PACKAGES_BASE}
+__pkg_install $(__rpm_build_packages)
+__pkg_install_file "${OPT_PKG_FILE}"
+
+[ "${OPT_NO_SKEL}" = "false" ]   && __copy_skel
+[ "${OPT_NO_MACROS}" = "false" ] && __setup_rpmmacros
+__setup_rpmbuild_tree
+
+# Cleanup any stale temp markers
+[ -f "/tmp/bootstrap" ]       && rm -f "/tmp/bootstrap"
+[ -f "/tmp/tools-install" ]   && rm -f "/tmp/tools-install"
+rm -f "/tmp/bootstrap.pid"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# lets exit with code
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-exit $BOOTSTRAP_EXIT_STATUS
+if [ "${BOOTSTRAP_EXIT_STATUS}" -eq 0 ]; then
+  ok "Bootstrap complete."
+else
+  error "Bootstrap finished with errors (exit status: ${BOOTSTRAP_EXIT_STATUS})."
+fi
+
+exit "${BOOTSTRAP_EXIT_STATUS}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ex: ts=2 sw=2 et filetype=sh
