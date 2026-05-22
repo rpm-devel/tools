@@ -76,7 +76,8 @@ ${CLR_BLD}Mirror layout:${CLR_RST}
     addons/     Upstream third-party (OS, langs, databases, infra)
     extras/     Community extras (EPEL, RPM Fusion, Ghettoforge, ELRepo)
     debug/      debuginfo/debugsource RPMs
-    srpms/      Source RPMs
+  $MIRROR_ROOT/RHEL/{VER}/
+    srpms/      Source RPMs (shared across arches)
 
 ${CLR_BLD}Config:${CLR_RST} $MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE
 EOF
@@ -321,7 +322,7 @@ __create_repos() {
 
   msg_step "Creating repo metadata"
 
-  for sub in rpms addons extras debug srpms; do
+  for sub in rpms addons extras debug; do
     local dir="$base_dir/$sub"
     [ -d "$dir" ] || continue
 
@@ -376,7 +377,7 @@ fi
 
 # Set paths
 MIRROR_BASE="$MIRROR_ROOT/$DISTRO/$VERNUM/$ARCH"
-MIRROR_SRPMS="$MIRROR_BASE/srpms"
+MIRROR_SRPMS="$MIRROR_ROOT/$DISTRO/$VERNUM/srpms"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Check tools
 __check_tools || exit 1
@@ -397,7 +398,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create directories
 if [ "$DRY_RUN" != "true" ]; then
-  mkdir -p "$MIRROR_BASE"/{rpms,addons,extras,debug,srpms} "$LOG_DIR"
+  mkdir -p "$MIRROR_BASE"/{rpms,addons,extras,debug} "$MIRROR_SRPMS" "$LOG_DIR"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Get repos to sync
@@ -431,13 +432,25 @@ __organize_packages "$MIRROR_BASE"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sign all packages
 __sign_packages "$MIRROR_BASE"
+__sign_packages "$MIRROR_SRPMS"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create repo metadata
 __create_repos "$MIRROR_BASE"
+# srpms at version level (shared across arches — no per-arch duplication)
+if [ -d "$MIRROR_SRPMS" ]; then
+  if [ "$DRY_RUN" = "true" ]; then
+    msg_info "[DRY-RUN] $CREATEREPO_BIN -q -d $MIRROR_SRPMS"
+  elif find "$MIRROR_SRPMS" -name "*.rpm" -print -quit 2>/dev/null | grep -q .; then
+    msg_info "createrepo: srpms/"
+    $CREATEREPO_BIN -q -d "$MIRROR_SRPMS" 2>>"$LOG_DIR/createrepo.log" \
+      && msg_ok "srpms/ repo metadata created" \
+      || msg_error "createrepo failed for $MIRROR_SRPMS"
+  fi
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Summary
 msg_step "Summary"
-total_rpms=$(find "$MIRROR_BASE" -name "*.rpm" 2>/dev/null | wc -l)
+total_rpms=$(find "$MIRROR_BASE" "$MIRROR_SRPMS" -name "*.rpm" 2>/dev/null | wc -l)
 echo "  ${CLR_GRN}Repos synced:${CLR_RST}  $synced/$repo_count"
 [ "$failed" -gt 0 ] && echo "  ${CLR_RED}Repos failed:${CLR_RST}  $failed ($failed_repos )"
 echo "  ${CLR_BLU}Total RPMs:${CLR_RST}    $total_rpms"

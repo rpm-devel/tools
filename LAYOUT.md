@@ -8,13 +8,17 @@ RHEL/{VER}/{ARCH}/
   addons/      Upstream third-party mirrors (OS, langs, databases, infra)
   extras/      Community extras (EPEL, RPM Fusion, Ghettoforge, ELRepo)
   debug/       All debuginfo/debugsource RPMs
-  srpms/       Source RPMs (arch-level)
+
+RHEL/{VER}/
+  srpms/       Source RPMs (shared across arches — stored once per version)
 
 Fedora/{VER}/{ARCH}/
   rpms/
   addons/
   extras/
   debug/
+
+Fedora/{VER}/
   srpms/
 ```
 
@@ -69,7 +73,7 @@ All .src.rpm files — from local builds and upstream mirrors.
 | ZREPO/RHEL/{VER}/{ARCH}/mirrors/addons | /RHEL/{VER}/{ARCH}/addons |
 | ZREPO/RHEL/{VER}/{ARCH}/mirrors/extras | /RHEL/{VER}/{ARCH}/extras |
 | ZREPO/RHEL/{VER}/{ARCH}/mirrors/debug | /RHEL/{VER}/{ARCH}/debug |
-| ZREPO/RHEL/{VER}/{ARCH}/mirrors/srpms | /RHEL/{VER}/{ARCH}/srpms |
+| ZREPO/RHEL/{VER}/mirrors/srpms | /RHEL/{VER}/srpms |
 
 ## create-mirror Routing
 

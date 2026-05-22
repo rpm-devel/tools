@@ -184,7 +184,7 @@ fi
 # Append arch after config load (avoids double-appending if HOST_RPM_ROOT was set in config without arch)
 HOST_RPM_ROOT="${HOST_RPM_ROOT:-$HOME/Documents/builds/rpmbuild/$DISTRO/$VERNAME$VERNUM}/$ARCH"
 HOST_PKG_ROOT="${HOST_PKG_ROOT:-$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM}/$ARCH"
-HOST_SRPM_ROOT="${HOST_PKG_ROOT}/srpms"
+HOST_SRPM_ROOT="${HOST_SRPM_ROOT:-$HOME/Documents/builds/sourceforge/$DISTRO/$VERNAME$VERNUM/srpms}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 [ "${SCRIPT_UPDATE:-}" = "true" ] && exit "${exitCode:-0}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -361,14 +361,14 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 msg_step "Creating directories"
 if [ "${DRY_RUN}" = "true" ]; then
-  msg_dry "mkdir -p ${LOG_DIR} ${HOST_PKG_ROOT}/{rpms,addons,extras,debug,srpms}"
+  msg_dry "mkdir -p ${LOG_DIR} ${HOST_SRPM_ROOT} ${HOST_PKG_ROOT}/{rpms,addons,extras,debug}"
 else
   mkdir -p "${LOG_DIR}"
+  mkdir -p "${HOST_SRPM_ROOT}"
   mkdir -p "${HOST_PKG_ROOT}/rpms"
   mkdir -p "${HOST_PKG_ROOT}/addons"
   mkdir -p "${HOST_PKG_ROOT}/extras"
   mkdir -p "${HOST_PKG_ROOT}/debug"
-  mkdir -p "${HOST_PKG_ROOT}/srpms"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 msg_step "Signing packages"
@@ -429,7 +429,7 @@ run_createrepo "rpms"    "${HOST_PKG_ROOT}/rpms"
 run_createrepo "addons"  "${HOST_PKG_ROOT}/addons"
 run_createrepo "extras"  "${HOST_PKG_ROOT}/extras"
 run_createrepo "debug"   "${HOST_PKG_ROOT}/debug"
-run_createrepo "srpms"   "${HOST_PKG_ROOT}/srpms"
+run_createrepo "srpms"   "${HOST_SRPM_ROOT}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Sync to local FTP server
 if [ "${SKIP_FTP}" != "true" ] && [ "${FTP_ERROR}" != "true" ]; then
@@ -447,6 +447,13 @@ if [ "${SKIP_FTP}" != "true" ] && [ "${FTP_ERROR}" != "true" ]; then
     "yes" \
     "${HOST_PKG_ROOT}/" \
     "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh" "--chown=ftp:ftp"
+
+  safe_rsync \
+    "srpms (no-delete) -> FTP:${FTP_DIR}/${DISTRO}/${VERNUM}/srpms" \
+    "no" \
+    "${HOST_SRPM_ROOT}/" \
+    "${FTP_USER}@${FTP_DOMAIN}:${FTP_DIR}/${DISTRO}/${VERNUM}/srpms/" \
     "-e" "ssh" "--chown=ftp:ftp"
 elif [ "${SKIP_FTP}" = "true" ]; then
   msg_info "FTP sync skipped (--skip-ftp)"
@@ -470,6 +477,13 @@ if [ "${SKIP_SOURCEFORGE}" != "true" ] && [ "${SOURCEFORGE_ERROR}" != "true" ]; 
     "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/${ARCH}/" \
     "-e" "ssh"
 
+  safe_rsync \
+    "srpms (no-delete) -> SF:htdocs/repo/${DISTRO}/${VERNUM}/srpms" \
+    "no" \
+    "${HOST_SRPM_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_WEB_URL}:/home/project-web/${SOURCEFORGE_PROJECT_NAME}/htdocs/repo/${DISTRO}/${VERNUM}/srpms/" \
+    "-e" "ssh"
+
 elif [ "${SKIP_SOURCEFORGE}" = "true" ]; then
   msg_info "SourceForge sync skipped (--skip-sourceforge)"
 fi
@@ -490,6 +504,13 @@ if [ "${SKIP_SOURCEFORGE}" != "true" ] && [ "${SOURCEFORGE_ERROR}" != "true" ]; 
     "yes" \
     "${HOST_PKG_ROOT}/" \
     "${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}:/home/frs/project/${SOURCEFORGE_PROJECT_NAME}/${DISTRO}/${VERNUM}/${ARCH}/" \
+    "-e" "ssh"
+
+  safe_rsync \
+    "srpms (no-delete) -> SF-FRS:${DISTRO}/${VERNUM}/srpms" \
+    "no" \
+    "${HOST_SRPM_ROOT}/" \
+    "${SOURCEFORGE_USER}@${SOURCEFORGE_FRS_URL}:/home/frs/project/${SOURCEFORGE_PROJECT_NAME}/${DISTRO}/${VERNUM}/srpms/" \
     "-e" "ssh"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
