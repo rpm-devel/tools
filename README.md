@@ -14,37 +14,54 @@ This installs the scripts to `/usr/local/bin` (root) or `~/.local/bin` (user) an
 
 ### create-container.sh
 
-Creates Docker build containers for cross-arch RPM builds.
+Pulls and manages the single shared build container (`ghcr.io/rpm-devel/build:latest`).
+Replaces the old per-distro/version container model — one image handles all targets via `mock`.
 
 ```shell
-# Create all containers (EL 8/9/10 + Fedora, both amd64 and arm64)
-create-container.sh all
+# Pull / update the build image
+create-container.sh pull
 
-# Create a specific version and arch
-create-container.sh 10 amd64
-create-container.sh fedora arm64
+# Enter an interactive shell with all standard mounts
+create-container.sh enter
 
-# Enter an existing container
-create-container.sh --enter almalinux 10 amd64
+# Enter with a specific mock target preset
+create-container.sh 9 amd64          # RPM_TARGET=almalinux-9-x86_64
+create-container.sh 10 arm64         # RPM_TARGET=almalinux-10-aarch64
+create-container.sh fedora amd64     # RPM_TARGET=fedora-42-x86_64
+create-container.sh 7                # RPM_TARGET=eol/centos-7-x86_64
 
-# Remove containers
-create-container.sh remove all
-create-container.sh remove 9 amd64
+# Pass a raw mock config name
+create-container.sh almalinux-9-x86_64
+
+# List all available mock targets
+create-container.sh list
+
+# Remove stale build containers (not the image)
+create-container.sh remove
 ```
 
 **Options:**
 
 | Option | Description |
 |--------|-------------|
-| `all` | Create containers for all enabled versions and arches |
-| `arm` | Create all versions for arm64 only |
-| `amd` | Create all versions for amd64 only |
-| `7/8/9/10` | Create a specific EL version |
-| `fedora` | Create Fedora containers |
-| `--enter` | Enter the container after creation |
-| `--remove` | Remove a container |
-| `--platform <arch>` | Override the default platform |
-| `--image <name>` | Override the container image |
+| `pull` / `all` | Pull or update `ghcr.io/rpm-devel/build:latest` |
+| `enter` | Start an interactive shell with standard mounts |
+| `list` | Print all available mock target names |
+| `remove` | Remove stale containers with the `rpmbuild-` prefix |
+| `7/8/9/10` | Enter with the matching AlmaLinux/CentOS mock target |
+| `fedora` | Enter with `fedora-{FEDORA_VERSION}-{arch}` |
+| `--enter` | Equivalent to the `enter` command |
+| `--platform <arch>` | Force `linux/amd64` or `linux/arm64` |
+| `--image <name>` | Override the build image |
+
+**Mounts (always applied):**
+
+| Host path | Container path | Mode |
+|-----------|---------------|------|
+| `~/rpmbuild` | `/root/rpmbuild` | rw |
+| `~/Documents/builds` | `/root/Documents/builds` | rw |
+| `~/.rpmmacros` | `/root/.rpmmacros` | ro |
+| `~/.gnupg` | `/root/.gnupg` | ro |
 
 **Configuration:** `~/.config/rpm-devel/settings.conf`
 
@@ -52,17 +69,29 @@ create-container.sh remove 9 amd64
 
 ### rpmbuild.sh
 
-Builds all (or specific) spec files, installs dependencies, downloads sources, and signs packages.
+Builds all (or specific) spec files for every enabled mock target using
+the `ghcr.io/rpm-devel/build:latest` container.
+`mock` inside the container installs build dependencies and handles each target
+in a clean chroot — no host toolchain needed.
 
 ```shell
-# Build all specs in ~/rpmbuild/
+# Build all specs for all enabled targets
 rpmbuild.sh
 
-# Build a single package
+# Build a single package across all enabled targets
 rpmbuild.sh nginx
 
-# Build without signing
+# Build for a specific target only
+rpmbuild.sh --target almalinux-9-x86_64
+
+# Build for multiple explicit targets
+rpmbuild.sh --target almalinux-9-x86_64 --target almalinux-9-aarch64
+
+# Build without GPG signing
 rpmbuild.sh --no-sign
+
+# List all targets that would be built
+rpmbuild.sh --list-targets
 
 # Update tools first
 rpmbuild.sh update
@@ -70,15 +99,25 @@ rpmbuild.sh update
 
 **What it does:**
 
-1. Finds all `.spec` files in `~/rpmbuild/`
-2. Downloads sources with `spectool -g -R`
-3. Installs build dependencies with `dnf builddep` (or `yum-builddep`)
-4. Runs `rpmbuild -ba` for each spec
-5. Signs all built RPMs with your GPG key
-6. Prints a build summary (passed/failed)
+1. Reads enabled targets from `~/.config/rpm-devel/settings.conf`
+2. For each spec × each enabled target, runs the build container:
+   - Container pulls sources, builds SRPM, and runs `mock --rebuild` for the target
+3. Moves built RPMs from the container output dir to the `make-repo`-compatible tree
+4. Optionally signs all built RPMs with your GPG key
+5. Prints a build summary (passed/failed per package)
+
+**Enabled targets (defaults):**
+
+| Setting | Mock targets |
+|---------|-------------|
+| `ENABLE_VERSION_7=yes` | `eol/centos-7-x86_64`, `eol/centos-7-aarch64` |
+| `ENABLE_VERSION_8=yes` | `almalinux-8-x86_64`, `almalinux-8-aarch64` |
+| `ENABLE_VERSION_9=yes` | `almalinux-9-x86_64`, `almalinux-9-aarch64` |
+| `ENABLE_VERSION_10=yes` | `almalinux-10-x86_64`, `almalinux-10-aarch64` |
+| `ENABLE_FEDORA=yes` | `fedora-{N}-x86_64`, `fedora-{N}-aarch64` |
 
 **Output directories:**
-- Built RPMs: `~/Documents/builds/rpmbuild/{DISTRO}/{NAME}{VER}/{ARCH}/`
+- Built RPMs: `~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/`
 - Build logs: `~/Documents/builds/logs/rpmbuild/`
 
 ---
@@ -226,8 +265,8 @@ RPM warns about "bogus date" when the weekday does not match the actual date (e.
 
 ```
 1. Install tools            →  install.sh
-2. Create build containers  →  create-container.sh all
-3. Enter a container        →  create-container.sh --enter almalinux 10 amd64
+2. Pull the build image     →  create-container.sh pull
+3. (Optional) Enter shell   →  create-container.sh enter
 4. Build packages           →  rpmbuild.sh
 5. Release packages         →  make-repo
 6. Mirror upstream repos    →  create-mirror -v 9   (separate, optional)
@@ -250,10 +289,14 @@ All configuration lives in `~/.config/rpm-devel/`:
 | `SOURCEFORGE_USER` | *(required)* | Your SourceForge username |
 | `FTP_USER` | `root` | FTP server username |
 | `MIRROR_ROOT` | `/var/ftp/pub/mirror` | Root of the local mirror tree |
-| `ENABLE_VERSION_8` | `yes` | Build containers for EL8 |
-| `ENABLE_VERSION_9` | `yes` | Build containers for EL9 |
-| `ENABLE_VERSION_10` | `yes` | Build containers for EL10 |
-| `ENABLE_FEDORA` | `yes` | Build containers for Fedora |
+| `BUILD_IMAGE` | `ghcr.io/rpm-devel/build:latest` | Build container image |
+| `RPM_GPG_KEY_ID` | *(from `.rpmmacros`)* | GPG key for signing built RPMs |
+| `ENABLE_VERSION_7` | `no` | Build EL7 targets |
+| `ENABLE_VERSION_8` | `yes` | Build EL8 targets |
+| `ENABLE_VERSION_9` | `yes` | Build EL9 targets |
+| `ENABLE_VERSION_10` | `yes` | Build EL10 targets |
+| `ENABLE_FEDORA` | `yes` | Build Fedora targets |
+| `FEDORA_VERSION` | `42` | Fedora version number |
 
 ## Supported platforms
 

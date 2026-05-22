@@ -1,293 +1,355 @@
 #!/usr/bin/env bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+##@Version           :  202605220000-git
+# @@Author           :  Jason Hempstead
+# @@Contact          :  git-admin@casjaysdev.pro
+# @@License          :  LICENSE.md
+# @@ReadME           :  rpmbuild.sh --help
+# @@Copyright        :  Copyright: (c) 2023 Jason Hempstead, Casjays Developments
+# @@Created          :  Thursday, Aug 17, 2023 20:28 EDT
+# @@File             :  rpmbuild.sh
+# @@Description      :  Build RPM packages using ghcr.io/rpm-devel/build:latest
+# @@Changelog        :  Rewritten to use the single build container with mock
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set -uo pipefail
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Color output helpers
-_red() { printf '\033[0;31m%s\033[0m\n' "$*"; }
-_grn() { printf '\033[0;32m%s\033[0m\n' "$*"; }
-_yel() { printf '\033[0;33m%s\033[0m\n' "$*"; }
-_blu() { printf '\033[0;34m%s\033[0m\n' "$*"; }
-_bld() { printf '\033[1m%s\033[0m\n' "$*"; }
+# Color helpers
+__red() { printf '\033[0;31m%s\033[0m\n' "$*"; }
+__grn() { printf '\033[0;32m%s\033[0m\n' "$*"; }
+__yel() { printf '\033[0;33m%s\033[0m\n' "$*"; }
+__blu() { printf '\033[0;34m%s\033[0m\n' "$*"; }
+__bld() { printf '\033[1m%s\033[0m\n' "$*"; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-usage() {
-    cat <<EOF
-Usage: $(basename "$0") [OPTIONS] [specname]
+__usage() {
+  cat <<EOF
+Usage: $(\basename "$0") [OPTIONS] [specname]
 
-Build RPM packages from spec files.
+Build RPM packages using ghcr.io/rpm-devel/build:latest.
+Each spec is built for every enabled mock target via the build container.
 
 Arguments:
-  specname      Build only this package (matches basename without .spec).
-                Omit to build all specs found under \$HOME/rpmbuild.
+  specname        Build only this package (matches basename without .spec).
+                  Omit to build all specs found under \$HOST_RPMBUILD_DIR.
 
 Options:
-  --no-sign     Skip GPG signing of built packages.
-  --update      Re-download and install the latest version of this script.
-  -h, --help    Show this help and exit.
+  --target TARGET Build only this mock target (e.g. almalinux-9-x86_64).
+                  Can be repeated: --target T1 --target T2
+  --no-sign       Skip GPG signing inside the build container.
+  --platform ARCH Override docker platform (linux/amd64 or linux/arm64).
+  --update        Re-install the latest version of this script.
+  --list-targets  Print all enabled mock targets and exit.
+  -h, --help      Show this help and exit.
 
-Environment:
-  SET_ARCH      Override architecture (default: uname -m).
-  SET_NAME      Override OS name component (default: from ~/.rpmmacros).
-  SET_VERSION   Override OS version component (default: from /etc/os-release).
+Environment / settings (~/.config/rpm-devel/settings.conf):
+  BUILD_IMAGE         Container image (default: ghcr.io/rpm-devel/build:latest)
+  RPM_GPG_KEY_ID      GPG key identifier for signing
+  ENABLE_VERSION_7/8/9/10 / ENABLE_FEDORA   Toggle target groups
+  FEDORA_VERSION      Fedora version number (default: 42)
+  HOST_RPMBUILD_DIR   Host rpmbuild root (default: ~/rpmbuild)
+  HOST_BUILDS_DIR     Host builds root   (default: ~/Documents/builds)
+
+Output:
+  After each build, RPMs are moved from the container output directory
+  into the make-repo-compatible tree:
+    ~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/
 EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Config defaults (overridden by settings.conf)
+BUILD_IMAGE="${BUILD_IMAGE:-ghcr.io/rpm-devel/build:latest}"
+FEDORA_VERSION="${FEDORA_VERSION:-42}"
+ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
+ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
+ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
+ENABLE_VERSION_10="${ENABLE_VERSION_10:-yes}"
+ENABLE_FEDORA="${ENABLE_FEDORA:-yes}"
+HOST_RPMBUILD_DIR="${HOST_RPMBUILD_DIR:-$HOME/rpmbuild}"
+HOST_BUILDS_DIR="${HOST_BUILDS_DIR:-$HOME/Documents/builds}"
+RPM_GPG_KEY_ID="${RPM_GPG_KEY_ID:-}"
+CONTAINER_PREFIX="${CONTAINER_PREFIX:-rpmbuild}"
+
+# Load user config
+RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
+RPM_BUILD_CONFIG_FILE="settings.conf"
+[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && \
+  . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Derived paths
+LOG_DIR="${HOST_BUILDS_DIR}/logs/rpmbuild"
+# Build output from container lands in HOST_BUILDS_DIR/{mock-target}/
+# after the build; we move it to the make-repo tree below.
+RPM_OUTPUT_BASE="${HOST_BUILDS_DIR}/rpmbuild"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Map a mock target name to the make-repo directory sub-path.
+# e.g. almalinux-9-x86_64 → RHEL/el9/x86_64
+__target_to_outdir() {
+  local t="$1"
+  case "$t" in
+    eol/centos-7-x86_64)    echo "RHEL/el7/x86_64" ;;
+    eol/centos-7-aarch64)   echo "RHEL/el7/aarch64" ;;
+    almalinux-8-x86_64)     echo "RHEL/el8/x86_64" ;;
+    almalinux-8-aarch64)    echo "RHEL/el8/aarch64" ;;
+    almalinux-9-x86_64)     echo "RHEL/el9/x86_64" ;;
+    almalinux-9-aarch64)    echo "RHEL/el9/aarch64" ;;
+    almalinux-10-x86_64)    echo "RHEL/el10/x86_64" ;;
+    almalinux-10-aarch64)   echo "RHEL/el10/aarch64" ;;
+    fedora-*-x86_64)
+      local v="${t#fedora-}"; v="${v%-x86_64}"
+      echo "Fedora/fc${v}/x86_64" ;;
+    fedora-*-aarch64)
+      local v="${t#fedora-}"; v="${v%-aarch64}"
+      echo "Fedora/fc${v}/aarch64" ;;
+    eol/fedora-*-x86_64)
+      local v="${t#eol/fedora-}"; v="${v%-x86_64}"
+      echo "Fedora/fc${v}/x86_64" ;;
+    eol/fedora-*-aarch64)
+      local v="${t#eol/fedora-}"; v="${v%-aarch64}"
+      echo "Fedora/fc${v}/aarch64" ;;
+    *)
+      # Sanitise slashes so we get a valid directory component
+      echo "OTHER/${t//\//-}" ;;
+  esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Parse arguments
 SINGLE_SPEC=""
 DO_SIGN=true
+FORCE_PLATFORM=""
+OVERRIDE_TARGETS=()
 
 while [[ $# -gt 0 ]]; do
-    case "$1" in
-        update|--update)
-            bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
-            exit $?
-            ;;
-        --no-sign)
-            DO_SIGN=false
-            shift
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        -*)
-            _red "Unknown option: $1"
-            usage
-            exit 1
-            ;;
-        *)
-            if [[ -n "${SINGLE_SPEC}" ]]; then
-                _red "Only one specname argument is allowed."
-                usage
-                exit 1
-            fi
-            SINGLE_SPEC="$1"
-            shift
-            ;;
-    esac
+  case "$1" in
+    update | --update)
+      \bash -c "$(\curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
+      exit $?
+      ;;
+    --target)
+      OVERRIDE_TARGETS+=("$2"); shift 2
+      ;;
+    --no-sign)
+      DO_SIGN=false; shift
+      ;;
+    --platform)
+      case "$2" in
+        amd64|x86_64)  FORCE_PLATFORM="linux/amd64" ;;
+        arm64|aarch64) FORCE_PLATFORM="linux/arm64" ;;
+        *)             FORCE_PLATFORM="linux/$2" ;;
+      esac
+      shift 2
+      ;;
+    --list-targets)
+      # Print and exit — populated after arg parsing below
+      LIST_TARGETS_ONLY=true; shift
+      ;;
+    -h | --help)
+      __usage; exit 0
+      ;;
+    -*)
+      __red "Unknown option: $1"; __usage; exit 1
+      ;;
+    *)
+      if [[ -n "${SINGLE_SPEC}" ]]; then
+        __red "Only one specname argument is allowed."
+        __usage; exit 1
+      fi
+      SINGLE_SPEC="$1"; shift
+      ;;
+  esac
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-clear
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Resolve build variables
-ARCH="${SET_ARCH:-}"
-VERNAME="${SET_NAME:-}"
-VERNUM="${SET_VERSION:-}"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-DISTRO="RHEL"
-ARCH="${ARCH:-$(uname -m)}"
-VERNAME="${VERNAME:-$(grep -s '%_osver ' "${HOME}/.rpmmacros" | awk -F ' ' '{print $2}' | sed 's|%.*||g' | grep '^' || echo "el")}"
-VERNUM="${VERNUM:-$(grep -s '^VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep '[0-9]' | awk -F '.' '{print $1}' | grep '^' || echo "")}"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-SPEC_DIR="${HOME}/rpmbuild"
-LOG_DIR="${HOME}/Documents/builds/logs/rpmbuild"
-BUILD_DIR="${HOME}/.local/tmp/BUILD_ROOT/BUILD"
-BUILD_ROOT="${HOME}/.local/tmp/BUILD_ROOT/BUILD_ROOT"
-SRC_DIR="${HOME}/Documents/builds/rpmbuild/${DISTRO}/${VERNAME}${VERNUM}/${ARCH}"
-TARGET_DIR="${HOME}/Documents/builds/sourceforge/${DISTRO}/${VERNAME}${VERNUM}/${ARCH}"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-export QA_RPATHS="${QA_RPATHS:-$((0x0001 | 0x0010))}"
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Validate required tools
-_check_tool() {
-    local tool="$1"
-    if ! command -v "${tool}" &>/dev/null; then
-        _red "Required tool not found: ${tool}"
-        return 1
-    fi
-}
-
-_check_tool rpmbuild || exit 1
-
-# Determine builddep command (prefer dnf on EL8+, fall back to yum-builddep)
-BUILDDEP_CMD=""
-if command -v dnf &>/dev/null; then
-    BUILDDEP_CMD="dnf builddep"
-elif command -v yum-builddep &>/dev/null; then
-    BUILDDEP_CMD="yum-builddep"
+# Build the list of enabled mock targets
+ENABLED_TARGETS=()
+if [ "${#OVERRIDE_TARGETS[@]}" -gt 0 ]; then
+  ENABLED_TARGETS=("${OVERRIDE_TARGETS[@]}")
+else
+  [ "$ENABLE_VERSION_7"  = "yes" ] && ENABLED_TARGETS+=("eol/centos-7-x86_64" "eol/centos-7-aarch64")
+  [ "$ENABLE_VERSION_8"  = "yes" ] && ENABLED_TARGETS+=("almalinux-8-x86_64"  "almalinux-8-aarch64")
+  [ "$ENABLE_VERSION_9"  = "yes" ] && ENABLED_TARGETS+=("almalinux-9-x86_64"  "almalinux-9-aarch64")
+  [ "$ENABLE_VERSION_10" = "yes" ] && ENABLED_TARGETS+=("almalinux-10-x86_64" "almalinux-10-aarch64")
+  [ "$ENABLE_FEDORA"     = "yes" ] && ENABLED_TARGETS+=("fedora-${FEDORA_VERSION}-x86_64" "fedora-${FEDORA_VERSION}-aarch64")
 fi
 
-# Determine if spectool is available
-HAS_SPECTOOL=false
-command -v spectool &>/dev/null && HAS_SPECTOOL=true
+if [ "${#ENABLED_TARGETS[@]}" -eq 0 ]; then
+  __red "No build targets enabled. Edit ~/.config/rpm-devel/settings.conf"
+  exit 1
+fi
+
+if [ "${LIST_TARGETS_ONLY:-false}" = "true" ]; then
+  printf '%s\n' "${ENABLED_TARGETS[@]}"
+  exit 0
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Validate that key variables resolved to non-empty paths
-_validate_path_var() {
-    local varname="$1"
-    local varval="$2"
-    if [[ -z "${varval}" ]]; then
-        _red "Variable ${varname} resolved to empty — cannot continue."
-        exit 1
-    fi
-}
-
-_validate_path_var "SRC_DIR"    "${SRC_DIR}"
-_validate_path_var "TARGET_DIR" "${TARGET_DIR}"
-_validate_path_var "BUILD_DIR"  "${BUILD_DIR}"
-_validate_path_var "BUILD_ROOT" "${BUILD_ROOT}"
-_validate_path_var "LOG_DIR"    "${LOG_DIR}"
-_validate_path_var "SPEC_DIR"   "${SPEC_DIR}"
+# Validate docker is present
+if ! \command -v docker &>/dev/null; then
+  __red "docker is required but not found in PATH"
+  exit 1
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Safe directory cleanup — guard each path explicitly before globbing
-_safe_clean_dir() {
-    local dir="$1"
-    # Require at least 3 path components so we never accidentally operate on / or /home
-    local depth
-    depth=$(awk -F'/' '{print NF-1}' <<<"${dir}")
-    if [[ ${depth} -lt 3 ]]; then
-        _red "Refusing to clean shallow path: ${dir}"
-        exit 1
-    fi
-    if [[ -d "${dir}" ]]; then
-        find "${dir}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-    fi
-}
+\clear
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Create directories
+\mkdir -p "${HOST_RPMBUILD_DIR}" "${HOST_BUILDS_DIR}" "${LOG_DIR}"
 
-_safe_clean_dir "${SRC_DIR}"
-_safe_clean_dir "${TARGET_DIR}"
-_safe_clean_dir "${BUILD_DIR}"
-_safe_clean_dir "${BUILD_ROOT}"
-
-mkdir -p "${SRC_DIR}" "${TARGET_DIR}" "${BUILD_DIR}" "${BUILD_ROOT}" "${LOG_DIR}"
-
-# Verify directories are writable after creation
-for _dir in "${SRC_DIR}" "${TARGET_DIR}" "${BUILD_DIR}" "${BUILD_ROOT}" "${LOG_DIR}"; do
-    if [[ ! -w "${_dir}" ]]; then
-        _red "Directory is not writable: ${_dir}"
-        exit 1
-    fi
-done
+# Fix GPG/SSH permissions
+\find "${HOME}/.gnupg" "${HOME}/.ssh" -type f -exec \chmod 600 {} \; 2>/dev/null || true
+\find "${HOME}/.gnupg" "${HOME}/.ssh" -type d -exec \chmod 700 {} \; 2>/dev/null || true
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build spec list
 if [[ -n "${SINGLE_SPEC}" ]]; then
-    # Find the spec matching the given name
-    mapfile -t _found < <(find "${SPEC_DIR}" -name "${SINGLE_SPEC}.spec" 2>/dev/null)
-    if [[ ${#_found[@]} -eq 0 ]]; then
-        _red "No spec file found for '${SINGLE_SPEC}' under ${SPEC_DIR}"
-        exit 1
-    fi
-    if [[ ${#_found[@]} -gt 1 ]]; then
-        _yel "Multiple spec files found for '${SINGLE_SPEC}'; using the first:"
-        _yel "  ${_found[0]}"
-    fi
-    mapfile -t spec_list < <(printf '%s\n' "${_found[0]}")
+  mapfile -t _found < <(\find "${HOST_RPMBUILD_DIR}" -name "${SINGLE_SPEC}.spec" 2>/dev/null)
+  if [[ ${#_found[@]} -eq 0 ]]; then
+    __red "No spec file found for '${SINGLE_SPEC}' under ${HOST_RPMBUILD_DIR}"
+    exit 1
+  fi
+  if [[ ${#_found[@]} -gt 1 ]]; then
+    __yel "Multiple specs found for '${SINGLE_SPEC}'; using: ${_found[0]}"
+  fi
+  spec_list=("${_found[0]}")
 else
-    mapfile -t spec_list < <(find "${SPEC_DIR}" -name '*.spec' | sort)
-    if [[ ${#spec_list[@]} -eq 0 ]]; then
-        _red "Cannot find any spec files in ${SPEC_DIR}"
-        exit 1
-    fi
-    printf '%s\n' "${spec_list[@]}" >"${LOG_DIR}/specs.txt"
+  mapfile -t spec_list < <(\find "${HOST_RPMBUILD_DIR}" -name '*.spec' | \sort)
+  if [[ ${#spec_list[@]} -eq 0 ]]; then
+    __red "No spec files found in ${HOST_RPMBUILD_DIR}"
+    exit 1
+  fi
+  printf '%s\n' "${spec_list[@]}" >"${LOG_DIR}/specs.txt"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Fix GPG/SSH permissions
-find "${HOME}/.gnupg" "${HOME}/.ssh" -type f -exec chmod 600 {} \; 2>/dev/null || true
-find "${HOME}/.gnupg" "${HOME}/.ssh" -type d -exec chmod 700 {} \; 2>/dev/null || true
+# Convert a host spec path to the container-side path.
+# Host: $HOME/rpmbuild/SPECS/foo.spec  →  Container: /root/rpmbuild/SPECS/foo.spec
+__host_to_container_path() {
+  local host_path="$1"
+  local rel="${host_path#"${HOST_RPMBUILD_DIR}"}"
+  echo "/root/rpmbuild${rel}"
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Tracking arrays for summary
+# After a successful container build, move RPMs from the container output
+# directory into the make-repo-compatible tree.
+__collect_rpms() {
+  local target="$1"
+  local outdir
+  outdir="$(__target_to_outdir "$target")"
+  local src_dir="${HOST_BUILDS_DIR}/${target}"
+  local dst_dir="${RPM_OUTPUT_BASE}/${outdir}"
+
+  if [ ! -d "${src_dir}" ] || [ -z "$(ls -A "${src_dir}" 2>/dev/null)" ]; then
+    __yel "  No output in ${src_dir} — nothing to collect"
+    return 0
+  fi
+
+  \mkdir -p "${dst_dir}"
+  local count=0
+  while IFS= read -r -d '' f; do
+    \mv -- "$f" "${dst_dir}/"
+    count=$((count + 1))
+  done < <(\find "${src_dir}" -maxdepth 1 -name "*.rpm" -print0 2>/dev/null)
+
+  if [ "$count" -gt 0 ]; then
+    __grn "  Collected ${count} RPM(s) → ${dst_dir}"
+  fi
+  # Clean up the now-empty target output dir
+  \rmdir "${src_dir}" 2>/dev/null || true
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Tracking
 succeeded=()
 failed=()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Build loop
+# Main build loop: for each spec, build every enabled target
 for spec_file in "${spec_list[@]}"; do
-    spec_name="$(basename "${spec_file%.spec}")"
-    mkdir -p "${LOG_DIR}/${spec_name}"
+  spec_name="$(\basename -- "${spec_file%.spec}")"
+  \mkdir -p "${LOG_DIR}/${spec_name}"
+  container_spec="$(__host_to_container_path "${spec_file}")"
 
-    _blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    _bld "Building: ${spec_name}  ($(date +'%Y-%m-%d %H:%M:%S'))"
-    echo "Building ${spec_name} package on $(date +'%Y-%m-%d at %H:%M')" \
-        | tee "${LOG_DIR}/${spec_name}/build.txt" "${LOG_DIR}/${spec_name}/errors.txt" >/dev/null
+  __blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+  __bld "Package: ${spec_name}  ($(date +'%Y-%m-%d %H:%M:%S'))"
 
-    pkg_start="${SECONDS}"
+  pkg_ok=true
 
-    # Install build dependencies
-    if [[ -n "${BUILDDEP_CMD}" ]]; then
-        _yel "  Installing build deps for ${spec_name}..."
-        if ${BUILDDEP_CMD} -y --skip-broken "${spec_file}" \
-                >>"${LOG_DIR}/${spec_name}/packages.txt" 2>&1; then
-            _grn "  Dependencies installed."
-        else
-            _yel "  Warning: builddep reported errors (continuing)."
-        fi
+  for target in "${ENABLED_TARGETS[@]}"; do
+    __yel "  Target: ${target}"
+
+    ctr_name="${CONTAINER_PREFIX}-$(\tr -dc 'a-z0-9' </dev/urandom | \head -c8)"
+
+    local_macros=()
+    [ -f "$HOME/.rpmmacros" ] && local_macros=("-v" "$HOME/.rpmmacros:/root/.rpmmacros:ro")
+
+    platform_flag=()
+    [ -n "${FORCE_PLATFORM}" ] && platform_flag=("--platform" "${FORCE_PLATFORM}")
+
+    gpg_flag=()
+    if "${DO_SIGN}" && [ -n "${RPM_GPG_KEY_ID}" ]; then
+      gpg_flag=("-e" "RPM_GPG_KEY_ID=${RPM_GPG_KEY_ID}")
+    fi
+
+    target_start="${SECONDS}"
+    if \docker run --rm -it --privileged \
+        --name "${ctr_name}" \
+        "${platform_flag[@]}" \
+        -v "${HOST_RPMBUILD_DIR}:/root/rpmbuild" \
+        -v "${HOST_BUILDS_DIR}:/root/Documents/builds" \
+        "${local_macros[@]}" \
+        -v "$HOME/.gnupg:/root/.gnupg:ro" \
+        -e "RPM_TARGET=${target}" \
+        "${gpg_flag[@]}" \
+        "$BUILD_IMAGE" \
+        "${container_spec}" \
+          >>"${LOG_DIR}/${spec_name}/build-${target//\//-}.txt" \
+          2>>"${LOG_DIR}/${spec_name}/errors-${target//\//-}.txt"; then
+      target_elapsed=$(( SECONDS - target_start ))
+      __grn "  SUCCESS: ${spec_name} / ${target} (${target_elapsed}s)"
+      __collect_rpms "${target}"
     else
-        _yel "  No builddep command found (yum-builddep/dnf) — skipping dependency install."
+      status_code="$?"
+      target_elapsed=$(( SECONDS - target_start ))
+      __red "  FAILED:  ${spec_name} / ${target} (exit ${status_code}, ${target_elapsed}s)"
+      __red "  See: ${LOG_DIR}/${spec_name}/errors-${target//\//-}.txt"
+      pkg_ok=false
     fi
+  done
 
-    # Download sources via spectool
-    if "${HAS_SPECTOOL}"; then
-        _yel "  Fetching sources for ${spec_name}..."
-        if spectool -g -R "${spec_file}" >>"${LOG_DIR}/${spec_name}/build.txt" 2>&1; then
-            _grn "  Sources fetched."
-        else
-            _yel "  Warning: spectool reported errors (sources may already exist)."
-        fi
-    fi
-
-    # Run rpmbuild
-    _yel "  Running rpmbuild for ${spec_name}..."
-    if rpmbuild -ba "${spec_file}" \
-            >>"${LOG_DIR}/${spec_name}/build.txt" \
-            2>>"${LOG_DIR}/${spec_name}/errors.txt"; then
-        pkg_elapsed=$(( SECONDS - pkg_start ))
-        _grn "  SUCCESS: ${spec_name} (${pkg_elapsed}s)"
-        echo "${spec_file} exit code 0" >>"${LOG_DIR}/${spec_name}/status.txt"
-        succeeded+=("${spec_name}")
-    else
-        status_code="$?"
-        pkg_elapsed=$(( SECONDS - pkg_start ))
-        _red "  FAILED: ${spec_name} (exit ${status_code}, ${pkg_elapsed}s)"
-        _red "  See: ${LOG_DIR}/${spec_name}/errors.txt"
-        echo "${spec_file} exit code ${status_code}" >>"${LOG_DIR}/${spec_name}/status.txt"
-        failed+=("${spec_name}")
-    fi
+  if "${pkg_ok}"; then
+    succeeded+=("${spec_name}")
+  else
+    failed+=("${spec_name}")
+  fi
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Sign packages
+# Host-side signing pass (catches any RPMs the container didn't sign,
+# or provides signing when --no-sign was passed to suppress container signing)
 if "${DO_SIGN}"; then
-    # Check for a usable GPG key before attempting to sign
-    gpg_key_count=0
-    if command -v gpg &>/dev/null; then
-        gpg_key_count=$(gpg --list-secret-keys 2>/dev/null | grep -c '^sec' || true)
-    fi
+  gpg_key_count=0
+  if \command -v gpg &>/dev/null; then
+    gpg_key_count=$(\gpg --list-secret-keys 2>/dev/null | \grep -c -- '^sec' || true)
+  fi
 
-    if [[ ${gpg_key_count} -eq 0 ]]; then
-        _yel "No GPG secret key found — skipping package signing."
-        _yel "Use --no-sign to suppress this message."
+  if [[ ${gpg_key_count} -gt 0 ]]; then
+    __blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+    __bld "Signing packages in ${RPM_OUTPUT_BASE}..."
+    mapfile -t _rpms < <(\find "${RPM_OUTPUT_BASE}" -iname '*.rpm' -not -iname '*.src.rpm' 2>/dev/null)
+
+    if [[ ${#_rpms[@]} -gt 0 ]]; then
+      if \rpmsign --addsign "${_rpms[@]}" 2>>"${LOG_DIR}/sign.err"; then
+        __grn "Signed ${#_rpms[@]} RPM(s)"
+      else
+        __yel "rpmsign reported errors — check ${LOG_DIR}/sign.err"
+      fi
     else
-        _blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-        _bld "Signing packages in ${SRC_DIR}..."
-        find "${SRC_DIR}" -iname '*.rpm' >"${LOG_DIR}/pkgs.txt"
-
-        if [[ ! -s "${LOG_DIR}/pkgs.txt" ]]; then
-            _yel "No RPM packages found to sign."
-        else
-            # Sign in batches via xargs to avoid ARG_MAX limits
-            if xargs -a "${LOG_DIR}/pkgs.txt" -d '\n' -r rpmsign --addsign; then
-                _grn "Packages signed successfully."
-            else
-                _red "rpmsign reported errors — check packages manually."
-            fi
-        fi
+      __yel "No RPMs found to sign in ${RPM_OUTPUT_BASE}"
     fi
-else
-    _yel "Skipping package signing (--no-sign)."
+  else
+    __yel "No GPG secret key found — skipping host-side signing"
+  fi
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Summary
-_blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-_bld "Build summary"
-_grn "  Succeeded: ${#succeeded[@]}"
-if [[ ${#succeeded[@]} -gt 0 ]]; then
-    for _pkg in "${succeeded[@]}"; do
-        _grn "    + ${_pkg}"
-    done
-fi
+__blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+__bld "Build summary (${#ENABLED_TARGETS[@]} target(s))"
+__grn "  Succeeded: ${#succeeded[@]}"
+for _pkg in "${succeeded[@]}"; do __grn "    + ${_pkg}"; done
 if [[ ${#failed[@]} -gt 0 ]]; then
-    _red "  Failed:    ${#failed[@]}"
-    for _pkg in "${failed[@]}"; do
-        _red "    - ${_pkg}"
-    done
+  __red "  Failed:    ${#failed[@]}"
+  for _pkg in "${failed[@]}"; do __red "    - ${_pkg}"; done
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 [[ ${#failed[@]} -eq 0 ]]
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # end
