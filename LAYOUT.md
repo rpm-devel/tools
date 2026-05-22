@@ -75,6 +75,25 @@ All .src.rpm files — from local builds and upstream mirrors.
 | ZREPO/RHEL/{VER}/{ARCH}/mirrors/debug | /RHEL/{VER}/{ARCH}/debug |
 | ZREPO/RHEL/{VER}/mirrors/srpms | /RHEL/{VER}/srpms |
 
+## Spec Repo Layout
+
+Every individual package repo (`certbot`, `cmus`, `nginx`, `git`, `nano`, etc.)
+uses a **flat layout** — all files at the repository root, no subdirectories.
+
+```
+{package}/
+  {package}.spec          ← spec file at root
+  {package}-{ver}.tar.gz  ← committed source(s) when not fetchable upstream
+  *.patch                 ← patches, if any
+  sources                 ← lookaside hash file, if used
+```
+
+No `SPEC/`, `SOURCES/`, `Makefile`, `IDEA.md`, `.github/`, or any other
+wrapper infrastructure. `spectool -g -R` fetches all `SourceN:` URLs at
+build time.
+
+---
+
 ## create-mirror Routing
 
 ```

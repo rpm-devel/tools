@@ -261,6 +261,26 @@ All configuration lives in `~/.config/rpm-devel/`:
 - **Target arches:** x86_64, aarch64 (via QEMU user-static)
 - **Target distros:** RHEL/AlmaLinux/Rocky/Oracle 7–10, Fedora, CentOS 7 (vault), CentOS 6 (vault)
 
+## Spec Repo Layout
+
+Every individual package repo (e.g. `certbot`, `cmus`, `nginx`, `git`, `nano`) uses a **flat layout** — all files live directly at the repository root. There are no `SPEC/`, `SOURCES/`, or `Makefile` subdirectories.
+
+```
+{package}/
+  {package}.spec          ← spec file at root
+  {package}-{ver}.tar.gz  ← upstream source tarball(s), if committed
+  *.patch                 ← patches, if any
+  sources                 ← spectool/lookaside cache hash file, if used
+```
+
+Rules:
+- One spec file per repo, named `{package}.spec`, at the root
+- Source tarballs referenced by `SourceN:` URLs are downloaded by `spectool -g -R` at build time — only commit them when they cannot be fetched from a canonical upstream URL
+- No `Makefile`, no `IDEA.md`, no `AI.md`, no `.github/` workflows in package repos
+- `bogusDate {package}.spec` before every commit to fix changelog weekday names
+
+---
+
 ## Related repos
 
 - [rpm-devel](https://github.com/rpm-devel) — GitHub org with all spec files
