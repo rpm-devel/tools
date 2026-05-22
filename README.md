@@ -1,6 +1,11 @@
 # rpm-devel tools
 
-Build, package, sign, and distribute RPMs for RHEL 7–10, Fedora, and derivatives (AlmaLinux, Rocky, Oracle Linux, CentOS).
+Build, package, sign, and distribute RPMs for RHEL 7–10, Fedora, and derivatives
+(AlmaLinux, Rocky, Oracle Linux, CentOS).
+
+All builds run inside `ghcr.io/rpm-devel/build:latest` — a single container image
+that ships `mock`, `rpmbuild`, `spectool`, and every required tool.
+No host toolchain, no per-distro containers, no QEMU setup required.
 
 ## Quick start
 
@@ -8,20 +13,54 @@ Build, package, sign, and distribute RPMs for RHEL 7–10, Fedora, and derivativ
 bash -c "$(curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
 ```
 
-This installs the scripts to `/usr/local/bin` (root) or `~/.local/bin` (user) and sets up `~/.rpmmacros`.
+This installs the scripts to `/usr/local/bin` (root) or `~/.local/bin` (user)
+and writes `~/.rpmmacros` with your GPG key settings.
+
+---
+
+## Workflow
+
+```
+1. Install tools            →  install.sh
+2. Pull the build image     →  create-container.sh pull
+3. Place spec files         →  clone repos into ~/rpmbuild/SPECS/ (or symlink)
+4. Build packages           →  rpmbuild.sh
+5. Release packages         →  make-repo
+6. Mirror upstream repos    →  create-mirror -v 9   (separate, optional)
+```
+
+### Step 3 in detail — placing spec files
+
+Each package lives in its own repo under the `rpm-devel` GitHub org.
+Clone the repos you want to build and place (or symlink) the `.spec` files
+under `~/rpmbuild/SPECS/`:
+
+```shell
+# Example: build cmus and nginx
+git clone https://github.com/rpm-devel/cmus  ~/Projects/github/rpm-devel/cmus
+git clone https://github.com/rpm-devel/nginx ~/Projects/github/rpm-devel/nginx
+
+ln -s ~/Projects/github/rpm-devel/cmus/cmus.spec  ~/rpmbuild/SPECS/
+ln -s ~/Projects/github/rpm-devel/nginx/nginx.spec ~/rpmbuild/SPECS/
+```
+
+`spectool -g -R` (run by the build container) downloads all `SourceN:` tarballs
+automatically; you do not need to commit upstream tarballs to the spec repos.
+
+---
 
 ## Tools
 
 ### create-container.sh
 
-Pulls and manages the single shared build container (`ghcr.io/rpm-devel/build:latest`).
-Replaces the old per-distro/version container model — one image handles all targets via `mock`.
+Pulls and manages `ghcr.io/rpm-devel/build:latest`.
+One image handles all distro targets via `mock` inside the container.
 
 ```shell
 # Pull / update the build image
 create-container.sh pull
 
-# Enter an interactive shell with all standard mounts
+# Enter an interactive shell (useful for debugging a build)
 create-container.sh enter
 
 # Enter with a specific mock target preset
@@ -40,19 +79,19 @@ create-container.sh list
 create-container.sh remove
 ```
 
-**Options:**
+**Commands / options:**
 
-| Option | Description |
-|--------|-------------|
+| Command / Option | Description |
+|-----------------|-------------|
 | `pull` / `all` | Pull or update `ghcr.io/rpm-devel/build:latest` |
-| `enter` | Start an interactive shell with standard mounts |
+| `enter` | Interactive shell with all standard mounts |
 | `list` | Print all available mock target names |
 | `remove` | Remove stale containers with the `rpmbuild-` prefix |
-| `7/8/9/10` | Enter with the matching AlmaLinux/CentOS mock target |
+| `7` / `8` / `9` / `10` | Enter with the matching AlmaLinux / CentOS target |
 | `fedora` | Enter with `fedora-{FEDORA_VERSION}-{arch}` |
-| `--enter` | Equivalent to the `enter` command |
 | `--platform <arch>` | Force `linux/amd64` or `linux/arm64` |
 | `--image <name>` | Override the build image |
+| `--config` | (Re)generate `~/.config/rpm-devel/settings.conf` |
 
 **Mounts (always applied):**
 
@@ -69,19 +108,18 @@ create-container.sh remove
 
 ### rpmbuild.sh
 
-Builds all (or specific) spec files for every enabled mock target using
-the `ghcr.io/rpm-devel/build:latest` container.
-`mock` inside the container installs build dependencies and handles each target
-in a clean chroot — no host toolchain needed.
+Builds spec files for every enabled mock target using the build container.
+`mock` inside the container installs `BuildRequires` and builds in a clean chroot —
+no host packages, no dependency pollution between builds.
 
 ```shell
-# Build all specs for all enabled targets
+# Build all specs in ~/rpmbuild/SPECS/ for all enabled targets
 rpmbuild.sh
 
-# Build a single package across all enabled targets
+# Build one package across all enabled targets
 rpmbuild.sh nginx
 
-# Build for a specific target only
+# Build for a specific mock target only
 rpmbuild.sh --target almalinux-9-x86_64
 
 # Build for multiple explicit targets
@@ -90,51 +128,59 @@ rpmbuild.sh --target almalinux-9-x86_64 --target almalinux-9-aarch64
 # Build without GPG signing
 rpmbuild.sh --no-sign
 
-# List all targets that would be built
+# List all targets that would be built (dry-run for target list)
 rpmbuild.sh --list-targets
 
-# Update tools first
+# Update tools
 rpmbuild.sh update
 ```
 
 **What it does:**
 
 1. Reads enabled targets from `~/.config/rpm-devel/settings.conf`
-2. For each spec × each enabled target, runs the build container:
-   - Container pulls sources, builds SRPM, and runs `mock --rebuild` for the target
-3. Moves built RPMs from the container output dir to the `make-repo`-compatible tree
+2. For each spec × each target, runs:
+   ```
+   docker run --rm --privileged ghcr.io/rpm-devel/build:latest /root/rpmbuild/SPECS/pkg.spec
+   ```
+   The container runs `spectool`, `rpmbuild -bs`, and `mock --rebuild` automatically.
+3. Moves built RPMs from the container output dir into the `make-repo`-compatible tree:
+   `~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/`
 4. Optionally signs all built RPMs with your GPG key
-5. Prints a build summary (passed/failed per package)
+5. Prints a per-package pass/fail summary
 
 **Enabled targets (defaults):**
 
 | Setting | Mock targets |
 |---------|-------------|
-| `ENABLE_VERSION_7=yes` | `eol/centos-7-x86_64`, `eol/centos-7-aarch64` |
+| `ENABLE_VERSION_7=no` | `eol/centos-7-x86_64`, `eol/centos-7-aarch64` |
 | `ENABLE_VERSION_8=yes` | `almalinux-8-x86_64`, `almalinux-8-aarch64` |
 | `ENABLE_VERSION_9=yes` | `almalinux-9-x86_64`, `almalinux-9-aarch64` |
 | `ENABLE_VERSION_10=yes` | `almalinux-10-x86_64`, `almalinux-10-aarch64` |
 | `ENABLE_FEDORA=yes` | `fedora-{N}-x86_64`, `fedora-{N}-aarch64` |
 
-**Output directories:**
+**Output:**
 - Built RPMs: `~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/`
-- Build logs: `~/Documents/builds/logs/rpmbuild/`
+- Build logs: `~/Documents/builds/logs/rpmbuild/{package}/`
+
+**Configuration:** `~/.config/rpm-devel/settings.conf`
 
 ---
 
 ### make-repo
 
-Signs built RPMs, runs `createrepo`, and syncs the release directories to SourceForge and a local FTP server.
+Signs built RPMs, runs `createrepo`, and syncs the release tree to SourceForge
+and a local FTP server.
+Run after `rpmbuild.sh` to publish what was just built.
 
 ```shell
 # Full run: sign, createrepo, sync
 make-repo
 
-# Dry run (show what would be done)
+# Dry run (show what would be done without doing it)
 make-repo --dry-run
 
-# Set arch and version explicitly
-make-repo --arch x86_64 --version 10
+# Override the distro/version/arch being published
+make-repo --name el --version 9 --arch x86_64
 
 # Skip remote sync
 make-repo --skip-ftp --skip-sourceforge
@@ -142,26 +188,26 @@ make-repo --skip-ftp --skip-sourceforge
 
 **What it does:**
 
-1. Signs all packages with `rpm --addsign`
-2. Moves SRPMs from the build tree into the release tree
-3. Moves debug RPMs (`*debuginfo*`, `*debugsource*`) into the `debug/` subdir
-4. Runs `createrepo_c` (or `createrepo`) on each repo directory
+1. Signs all RPMs and SRPMs under `~/Documents/builds/rpmbuild/` with `rpm --addsign`
+2. Moves SRPMs into the release tree's `srpms/` directory
+3. Moves `*debuginfo*` / `*debugsource*` RPMs into `debug/`
+4. Runs `createrepo_c` on `rpms/`, `addons/`, `extras/`, `debug/`, and `srpms/`
 5. Syncs to local FTP server (`ftp.casjaysdev.pro`)
 6. Syncs to SourceForge web hosting (`web.sourceforge.net`)
 7. Syncs to SourceForge FRS download mirrors (`frs.sourceforge.net`)
 
-**Local staging layout** (`~/Documents/builds/sourceforge/{DISTRO}/{NAME}{VER}/`):
+**Release tree layout** (`~/Documents/builds/sourceforge/{DISTRO}/{rel}{VER}/`):
 
 ```
 {ARCH}/
-  rpms/     binary RPMs
-  addons/   addon packages
-  extras/   extra packages
+  rpms/     CasjaysDev-built binary RPMs
+  addons/   Upstream third-party mirrors
+  extras/   Community extras (EPEL, RPM Fusion, ELRepo)
   debug/    debuginfo and debugsource RPMs
-srpms/      source RPMs (shared across arches)
+srpms/      Source RPMs (shared across arches)
 ```
 
-This same layout is mirrored verbatim to FTP and SourceForge.
+This layout is mirrored verbatim to FTP and SourceForge.
 
 **Configuration:** `~/.config/rpm-devel/make-repo-settings.conf`
 
@@ -169,7 +215,9 @@ This same layout is mirrored verbatim to FTP and SourceForge.
 
 ### create-mirror
 
-Downloads upstream repos to a local mirror tree using `reposync`. Supports RHEL/AlmaLinux, CentOS (vault), and Fedora. Only the newest RPM for each package is kept (`--newest-only`).
+Downloads upstream repos to a local mirror tree using `reposync`.
+Supports RHEL/AlmaLinux, CentOS (vault), and Fedora.
+Only the newest RPM for each package is kept (`--newest-only`).
 
 ```shell
 # Mirror RHEL/AlmaLinux 9 (defaults to host arch)
@@ -178,11 +226,8 @@ create-mirror -v 9
 # Mirror CentOS 7 from vault (x86_64 only)
 create-mirror -d centos -v 7
 
-# Mirror CentOS 6 from vault (x86_64 only)
-create-mirror -d centos -v 6
-
-# Mirror Fedora 41
-create-mirror -d fedora -v 41
+# Mirror Fedora 42
+create-mirror -d fedora -v 42
 
 # Mirror a specific repo only
 create-mirror -v 9 -r casjay-epel
@@ -199,7 +244,7 @@ create-mirror -v 9 --no-sign
 | Option | Description |
 |--------|-------------|
 | `-d, --distro` | Distribution: `rhel` (default), `centos`, `fedora` |
-| `-v, --version` | Major version to mirror: 6, 7, 8, 9, 10 |
+| `-v, --version` | Major version: 6, 7, 8, 9, 10 |
 | `-a, --arch` | Architecture (default: host arch) |
 | `-r, --repos` | Comma-separated repo IDs to sync (default: all enabled) |
 | `--dry-run` | Show what would be synced without doing it |
@@ -221,27 +266,28 @@ Repos routed to each directory:
 | Directory | Repo IDs matched |
 |-----------|-----------------|
 | `extras/` | `casjay-epel`, `casjay-rpmfusion*`, `casjay-gf`, `casjay-elrepo*` |
-| `srpms/`  | `*-srpm`, `*-SRPMS`, `*-source` |
+| `srpms/` | `*-srpm`, `*-SRPMS`, `*-source` |
 | `addons/` | Everything else (OS, languages, databases, infra, etc.) |
 | *(skipped)* | `casjay-rpms`, `casjay-addons`, `casjay-extras`, `casjay-debug`, `casjay-sources`, `casjay-packages`, `casjay-testing` — local repos, not mirrored |
 
-Repo files are read from `casjay-release/` (checked in `~/rpmbuild/`, `~/Projects/github/rpm-devel/`, and `~/Projects/local/system/repo/rpm-devel/`).
+Repo files are read from `casjay-release/` (checked in `~/rpmbuild/`,
+`~/Projects/github/rpm-devel/`, and `~/Projects/local/system/repo/rpm-devel/`).
 
-**Configuration:** `~/.config/rpm-devel/create-mirror-settings.conf`  
+**Configuration:** `~/.config/rpm-devel/create-mirror-settings.conf`
 **Logs:** `/var/log/rpm-devel/mirror/`
 
 ---
 
 ### bootstrap
 
-Bootstraps a fresh container for RPM building. Typically called automatically by `create-container.sh`.
+Sets up rpmbuild directories and installs base build tools.
+Useful when configuring a new host or a manually created container.
+In the normal workflow this step is not needed — `rpmbuild.sh` handles
+everything inside the build container automatically.
 
 ```shell
-# Usually called automatically; can be run manually inside a container
 bootstrap
 ```
-
-Installs build tools, sets up rpmbuild directories, and configures the environment.
 
 ---
 
@@ -250,45 +296,38 @@ Installs build tools, sets up rpmbuild directories, and configures the environme
 Fixes incorrect weekday names in spec file `%changelog` entries.
 
 ```shell
-# Fix bogus dates in a spec file
-bogusDate mypackage.spec
+# Fix one spec
+bogusDate cmus.spec
 
-# Fix multiple specs
+# Fix all specs at once
 bogusDate *.spec
 ```
 
-RPM warns about "bogus date" when the weekday does not match the actual date (e.g., `Thu` written for a day that was a Friday). This script automatically corrects them.
+RPM rejects changelogs where the weekday does not match the calendar date
+(e.g. `Thu` written for a Friday). Run `bogusDate` before every commit.
 
 ---
-
-## Workflow
-
-```
-1. Install tools            →  install.sh
-2. Pull the build image     →  create-container.sh pull
-3. (Optional) Enter shell   →  create-container.sh enter
-4. Build packages           →  rpmbuild.sh
-5. Release packages         →  make-repo
-6. Mirror upstream repos    →  create-mirror -v 9   (separate, optional)
-```
 
 ## Configuration
 
 All configuration lives in `~/.config/rpm-devel/`:
 
-| File | Purpose |
-|------|---------|
-| `settings.conf` | Container settings (images, versions, paths) |
-| `make-repo-settings.conf` | Release settings (SourceForge user, FTP host/dir) |
-| `create-mirror-settings.conf` | Mirror settings (mirror root, excluded repos) |
+| File | Used by | Purpose |
+|------|---------|---------|
+| `settings.conf` | `create-container.sh`, `rpmbuild.sh` | Build image, enabled targets, paths |
+| `make-repo-settings.conf` | `make-repo` | SourceForge user, FTP host/dir |
+| `create-mirror-settings.conf` | `create-mirror` | Mirror root, excluded repos |
+
+Generate the default `settings.conf`:
+
+```shell
+create-container.sh --config
+```
 
 ## Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCEFORGE_USER` | *(required)* | Your SourceForge username |
-| `FTP_USER` | `root` | FTP server username |
-| `MIRROR_ROOT` | `/var/ftp/pub/mirror` | Root of the local mirror tree |
 | `BUILD_IMAGE` | `ghcr.io/rpm-devel/build:latest` | Build container image |
 | `RPM_GPG_KEY_ID` | *(from `.rpmmacros`)* | GPG key for signing built RPMs |
 | `ENABLE_VERSION_7` | `no` | Build EL7 targets |
@@ -297,30 +336,35 @@ All configuration lives in `~/.config/rpm-devel/`:
 | `ENABLE_VERSION_10` | `yes` | Build EL10 targets |
 | `ENABLE_FEDORA` | `yes` | Build Fedora targets |
 | `FEDORA_VERSION` | `42` | Fedora version number |
+| `SOURCEFORGE_USER` | *(required for sync)* | Your SourceForge username |
+| `FTP_USER` | `root` | FTP server username |
+| `MIRROR_ROOT` | `/var/ftp/pub/mirror` | Root of the local mirror tree |
 
 ## Supported platforms
 
 - **Build host:** x86_64 Linux with Docker
-- **Target arches:** x86_64, aarch64 (via QEMU user-static)
-- **Target distros:** RHEL/AlmaLinux/Rocky/Oracle 7–10, Fedora, CentOS 7 (vault), CentOS 6 (vault)
+- **Build container:** `ghcr.io/rpm-devel/build:latest` (Fedora-based, multi-arch)
+- **Target arches:** x86_64, aarch64 — mock handles cross-arch builds inside the container
+- **Target distros:** RHEL/AlmaLinux/Rocky/Oracle 8–10, CentOS 7 (EOL), Fedora current + rawhide
 
 ## Spec Repo Layout
 
-Every individual package repo (e.g. `certbot`, `cmus`, `nginx`, `git`, `nano`) uses a **flat layout** — all files live directly at the repository root. There are no `SPEC/`, `SOURCES/`, or `Makefile` subdirectories.
+Every package repo uses a **flat layout** — spec file and any committed sources
+sit directly at the repository root. No `SPEC/`, `SOURCES/`, or `Makefile`.
 
 ```
 {package}/
   {package}.spec          ← spec file at root
-  {package}-{ver}.tar.gz  ← upstream source tarball(s), if committed
+  {package}-{ver}.tar.gz  ← committed sources (only when not fetchable upstream)
   *.patch                 ← patches, if any
-  sources                 ← spectool/lookaside cache hash file, if used
+  sources                 ← lookaside hash file, if used
 ```
 
 Rules:
-- One spec file per repo, named `{package}.spec`, at the root
-- Source tarballs referenced by `SourceN:` URLs are downloaded by `spectool -g -R` at build time — only commit them when they cannot be fetched from a canonical upstream URL
-- No `Makefile`, no `IDEA.md`, no `AI.md`, no `.github/` workflows in package repos
-- `bogusDate {package}.spec` before every commit to fix changelog weekday names
+- One spec per repo, named `{package}.spec`, at the root
+- `SourceN:` tarballs are downloaded by `spectool -g -R` at build time
+- No `Makefile`, `IDEA.md`, `AI.md`, or `.github/` in package repos
+- Run `bogusDate {package}.spec` before every commit
 
 ---
 
