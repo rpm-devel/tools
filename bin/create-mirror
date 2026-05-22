@@ -72,18 +72,11 @@ ${CLR_BLD}Examples:${CLR_RST}
 
 ${CLR_BLD}Mirror layout:${CLR_RST}
   $MIRROR_ROOT/RHEL/{VER}/{ARCH}/
-    casjay/     CasjaysDev packages (built locally, not mirrored)
-    testing/    Pre-release packages (built locally, not mirrored)
-    os/         Upstream base OS (AlmaLinux)
-    langs/      Languages (PHP, Node.js, Yarn)
-    databases/  Databases (MariaDB, PostgreSQL, MongoDB)
-    infra/      Infrastructure (Docker, Jenkins, Webmin)
-    extras/     Community (EPEL, RPM Fusion, Ghettoforge)
-    kernel/     ELRepo kernel + drivers
+    rpms/       CasjaysDev packages (built locally, not mirrored here)
+    addons/     Upstream third-party (OS, langs, databases, infra)
+    extras/     Community extras (EPEL, RPM Fusion, Ghettoforge, ELRepo)
     debug/      debuginfo/debugsource RPMs
-    empty/      Placeholder for missing arches
-  $MIRROR_ROOT/RHEL/{VER}/
-    sources/    All source RPMs
+    srpms/      Source RPMs
 
 ${CLR_BLD}Config:${CLR_RST} $MIRROR_CONFIG_DIR/$MIRROR_CONFIG_FILE
 EOF
@@ -205,48 +198,19 @@ __repo_dest_dir() {
   local repo_id="$1"
   local base_dir="$2"
   case "$repo_id" in
-    # ALL SRPM/source repos -> sources/ FIRST (before any other match)
+    # ALL SRPM/source repos -> srpms/ FIRST
     *-srpm|*-SRPMS|*-source)
       echo "$MIRROR_SRPMS" ;;
-    # Upstream OS repos -> os/
-    casjay-os|casjay-os-base|casjay-os-appstream|casjay-os-crb|casjay-os-extras|casjay-os-plus)
-      echo "$base_dir/os" ;;
-    casjay-os-updates|casjay-os-highavailability|casjay-os-nfv|casjay-os-rt)
-      echo "$base_dir/os" ;;
-    casjay-os-resilientstorage|casjay-os-saphana|casjay-os-sap|casjay-os-centosplus)
-      echo "$base_dir/os" ;;
-    # Languages -> langs/
-    casjay-remi*|casjay-nodejs|casjay-yarn)
-      echo "$base_dir/langs" ;;
-    # Databases -> databases/
-    casjay-mariadb|casjay-postgresql|casjay-mongodb|casjay-mssql)
-      echo "$base_dir/databases" ;;
-    # Infrastructure -> infra/
-    casjay-docker*|casjay-jenkins|casjay-webmin|casjay-pritunl|casjay-copr-*|casjay-i2pd)
-      echo "$base_dir/infra" ;;
-    # Kernel -> kernel/
-    casjay-elrepo*)
-      echo "$base_dir/kernel" ;;
     # Community extras -> extras/
-    casjay-epel|casjay-rpmfusion*|casjay-gf)
+    casjay-epel|casjay-rpmfusion*|casjay-gf|casjay-elrepo*)
       echo "$base_dir/extras" ;;
     # Our own repos -> skip (built locally, not mirrored)
-    casjay-packages|casjay-testing|casjay-rpms|casjay-addons|casjay-extras|casjay-debug|casjay-sources)
+    casjay-rpms|casjay-addons|casjay-extras|casjay-debug|casjay-sources|casjay-packages|casjay-testing)
       msg_warn "$repo_id is a local repo — skipping mirror sync" >&2
       return 1 ;;
-    # SCLo (EL7) -> os/
-    casjay-sclo*)
-      echo "$base_dir/os" ;;
-    # Non-prefixed repo names (legacy naming in some repo files)
-    remi-modular*)
-      echo "$base_dir/langs" ;;
-    mongodb*|postgres*|pgsql*)
-      echo "$base_dir/databases" ;;
-    webmin*|pritunl*)
-      echo "$base_dir/infra" ;;
-    # Everything else -> extras/
+    # Everything else (OS, langs, databases, infra) -> addons/
     *)
-      echo "$base_dir/extras" ;;
+      echo "$base_dir/addons" ;;
   esac
 }
 
@@ -357,7 +321,7 @@ __create_repos() {
 
   msg_step "Creating repo metadata"
 
-  for sub in casjay testing os langs databases infra extras kernel debug; do
+  for sub in rpms addons extras debug srpms; do
     local dir="$base_dir/$sub"
     [ -d "$dir" ] || continue
 
@@ -412,7 +376,7 @@ fi
 
 # Set paths
 MIRROR_BASE="$MIRROR_ROOT/$DISTRO/$VERNUM/$ARCH"
-MIRROR_SRPMS="$MIRROR_ROOT/$DISTRO/$VERNUM/sources"
+MIRROR_SRPMS="$MIRROR_BASE/srpms"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Check tools
 __check_tools || exit 1
@@ -433,7 +397,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create directories
 if [ "$DRY_RUN" != "true" ]; then
-  mkdir -p "$MIRROR_BASE"/{casjay,testing,os,langs,databases,infra,extras,kernel,debug,empty} "$MIRROR_SRPMS" "$LOG_DIR"
+  mkdir -p "$MIRROR_BASE"/{rpms,addons,extras,debug,srpms} "$LOG_DIR"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Get repos to sync
