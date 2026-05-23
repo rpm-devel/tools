@@ -48,8 +48,8 @@ HOST_BUILDS_DIR="${HOST_BUILDS_DIR:-$HOME/Documents/builds}"
 CONTAINER_PREFIX="${CONTAINER_PREFIX:-rpmbuild}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 __gen_config() {
-  mkdir -p "$RPM_BUILD_CONFIG_DIR"
-  cat >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" <<EOF
+  \mkdir -p "$RPM_BUILD_CONFIG_DIR"
+  \cat >"$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" <<EOF
 # rpm-devel build settings — edit these values
 
 # Build container image

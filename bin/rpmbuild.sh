@@ -261,7 +261,7 @@ for spec_file in "${spec_list[@]}"; do
   container_spec="$(__host_to_container_path "${spec_file}")"
 
   __blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-  __bld "Package: ${spec_name}  ($(date +'%Y-%m-%d %H:%M:%S'))"
+  __bld "Package: ${spec_name}  $(\date +'%Y-%m-%d %H:%M:%S')"
 
   pkg_ok=true
 
