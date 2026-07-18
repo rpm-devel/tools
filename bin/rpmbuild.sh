@@ -52,6 +52,12 @@ Output:
   After each build, RPMs are moved from the container output directory
   into the make-repo-compatible tree:
     ~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/
+
+Note:
+  If entries under HOST_RPMBUILD_DIR are symlinks into another checkout
+  (e.g. ~/rpmbuild/{repo} -> ~/Projects/.../rpm-devel/{repo}), their real
+  parent directories are auto-detected and bind-mounted read-only at the
+  same absolute path so the symlinks resolve inside the container.
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -194,6 +200,24 @@ fi
 \find "${HOME}/.gnupg" "${HOME}/.ssh" -type f -exec \chmod 600 {} \; 2>/dev/null || true
 \find "${HOME}/.gnupg" "${HOME}/.ssh" -type d -exec \chmod 700 {} \; 2>/dev/null || true
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# HOST_RPMBUILD_DIR entries are often symlinks into a separate checkout
+# tree (e.g. ~/rpmbuild/{repo} -> ~/Projects/.../rpm-devel/{repo}). A plain
+# bind mount of HOST_RPMBUILD_DIR does not make symlink targets outside it
+# resolvable inside the container, so resolve each top-level symlink and
+# bind-mount its real parent directory at the identical absolute path.
+EXTRA_MOUNTS=()
+_seen_parents=()
+while IFS= read -r -d '' _link; do
+  _target="$(\readlink -f -- "${_link}" 2>/dev/null)" || continue
+  [ -z "${_target}" ] && continue
+  _parent="${_target%/*}"
+  _dup=false
+  for _p in "${_seen_parents[@]:-}"; do
+    [ "${_p}" = "${_parent}" ] && _dup=true && break
+  done
+  "${_dup}" || { _seen_parents+=("${_parent}"); EXTRA_MOUNTS+=("-v" "${_parent}:${_parent}:ro"); }
+done < <(\find "${HOST_RPMBUILD_DIR}" -maxdepth 1 -type l -print0 2>/dev/null)
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build spec list
 if [[ -n "${SINGLE_SPEC}" ]]; then
   mapfile -t _found < <(\find "${HOST_RPMBUILD_DIR}" -name "${SINGLE_SPEC}.spec" 2>/dev/null)
@@ -286,6 +310,7 @@ for spec_file in "${spec_list[@]}"; do
         --name "${ctr_name}" \
         "${platform_flag[@]}" \
         -v "${HOST_RPMBUILD_DIR}:/root/rpmbuild" \
+        "${EXTRA_MOUNTS[@]}" \
         -v "${HOST_BUILDS_DIR}:/root/Documents/builds" \
         "${local_macros[@]}" \
         -v "$HOME/.gnupg:/root/.gnupg:ro" \
