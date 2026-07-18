@@ -223,18 +223,17 @@ __setup_rpmmacros() {
   fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Run rpmdev-setuptree to create ~/rpmbuild structure
+# Create the directory tree expected by .rpmmacros. This org's ~/rpmbuild
+# is a flat per-package layout (~/rpmbuild/{name}/{name}.spec + sources),
+# not the traditional rpmdev-setuptree BUILD/BUILDROOT/RPMS/SOURCES/SPECS/
+# SRPMS tree, so that tree is never created here. .rpmmacros points
+# _builddir/_buildrootdir at ~/.local/tmp/BUILD(ROOT) and _srcrpmdir/
+# _rpmdir at ~/Documents/builds/..., so only those plus the flat
+# ~/rpmbuild root itself need to exist.
 __setup_rpmbuild_tree() {
-  if command -v rpmdev-setuptree >/dev/null 2>&1; then
-    info "Running rpmdev-setuptree..."
-    rpmdev-setuptree && ok "rpmbuild directory tree ready." || warn "rpmdev-setuptree failed."
-  else
-    warn "rpmdev-setuptree not found; creating rpmbuild dirs manually."
-    for d in BUILD BUILDROOT RPMS SOURCES SPECS SRPMS; do
-      mkdir -p "${HOME}/rpmbuild/${d}"
-    done
-    ok "rpmbuild directory tree created manually."
-  fi
+  mkdir -p "${HOME}/rpmbuild"
+  mkdir -p "${HOME}/.local/tmp/BUILD" "${HOME}/.local/tmp/BUILDROOT"
+  ok "rpmbuild directory tree ready (flat layout, no SPECS/SOURCES/RPMS subdirs)."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Parse arguments
