@@ -116,8 +116,9 @@ ${__clr_bold}Mounts (always applied):${__clr_reset}
 
 If entries under \$HOST_RPMBUILD_DIR are symlinks into another checkout
 (e.g. ~/rpmbuild/{repo} -> ~/Projects/.../rpm-devel/{repo}), their real
-parent directories are auto-detected and bind-mounted read-only at the
-same absolute path so the symlinks resolve inside the container.
+parent directories are auto-detected and bind-mounted (read-write, since
+spectool writes downloaded sources into the package dir) at the same
+absolute path so the symlinks resolve inside the container.
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -184,7 +185,7 @@ __extra_symlink_mounts() {
     done
     if ! $dup; then
       seen_parents+=("$parent")
-      printf '%s\n%s\n' "-v" "${parent}:${parent}:ro"
+      printf '%s\n%s\n' "-v" "${parent}:${parent}"
     fi
   done < <(\find "${HOST_RPMBUILD_DIR}" -maxdepth 1 -type l -print0 2>/dev/null)
 }

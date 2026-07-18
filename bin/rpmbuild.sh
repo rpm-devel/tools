@@ -56,8 +56,9 @@ Output:
 Note:
   If entries under HOST_RPMBUILD_DIR are symlinks into another checkout
   (e.g. ~/rpmbuild/{repo} -> ~/Projects/.../rpm-devel/{repo}), their real
-  parent directories are auto-detected and bind-mounted read-only at the
-  same absolute path so the symlinks resolve inside the container.
+  parent directories are auto-detected and bind-mounted (read-write, since
+  spectool writes downloaded sources into the package dir) at the same
+  absolute path so the symlinks resolve inside the container.
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -215,12 +216,12 @@ while IFS= read -r -d '' _link; do
   for _p in "${_seen_parents[@]:-}"; do
     [ "${_p}" = "${_parent}" ] && _dup=true && break
   done
-  "${_dup}" || { _seen_parents+=("${_parent}"); EXTRA_MOUNTS+=("-v" "${_parent}:${_parent}:ro"); }
+  "${_dup}" || { _seen_parents+=("${_parent}"); EXTRA_MOUNTS+=("-v" "${_parent}:${_parent}"); }
 done < <(\find "${HOST_RPMBUILD_DIR}" -maxdepth 1 -type l -print0 2>/dev/null)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build spec list
 if [[ -n "${SINGLE_SPEC}" ]]; then
-  mapfile -t _found < <(\find "${HOST_RPMBUILD_DIR}" -name "${SINGLE_SPEC}.spec" 2>/dev/null)
+  mapfile -t _found < <(\find -L "${HOST_RPMBUILD_DIR}" -name "${SINGLE_SPEC}.spec" 2>/dev/null)
   if [[ ${#_found[@]} -eq 0 ]]; then
     __red "No spec file found for '${SINGLE_SPEC}' under ${HOST_RPMBUILD_DIR}"
     exit 1
@@ -230,7 +231,7 @@ if [[ -n "${SINGLE_SPEC}" ]]; then
   fi
   spec_list=("${_found[0]}")
 else
-  mapfile -t spec_list < <(\find "${HOST_RPMBUILD_DIR}" -name '*.spec' | \sort)
+  mapfile -t spec_list < <(\find -L "${HOST_RPMBUILD_DIR}" -name '*.spec' | \sort)
   if [[ ${#spec_list[@]} -eq 0 ]]; then
     __red "No spec files found in ${HOST_RPMBUILD_DIR}"
     exit 1
@@ -306,7 +307,7 @@ for spec_file in "${spec_list[@]}"; do
     fi
 
     target_start="${SECONDS}"
-    if \docker run --rm -it --privileged \
+    if \docker run --rm --privileged \
         --name "${ctr_name}" \
         "${platform_flag[@]}" \
         -v "${HOST_RPMBUILD_DIR}:/root/rpmbuild" \
