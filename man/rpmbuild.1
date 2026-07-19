@@ -1,0 +1,134 @@
+.TH "RPMBUILD" "1" "2026-07-18" "rpmbuild 202607181900-git" "User Commands"
+.SH NAME
+rpmbuild \- build RPM packages using ghcr.io/rpm-devel/build container
+.SH SYNOPSIS
+.B rpmbuild
+[\fIOPTIONS\fR]
+[\fIspecname\fR]
+.SH DESCRIPTION
+.B rpmbuild
+builds RPM packages using the ghcr.io/rpm-devel/build container image.
+Each spec is built for every enabled mock target via the build container.
+Output RPMs are collected and organized into a make-repo-compatible directory tree.
+.SH ARGUMENTS
+.TP
+.B specname
+Build only this package (matches basename without .spec extension).
+Omit to build all specs found under
+.B $RPMBUILD_HOST_RPMBUILD_DIR
+.SH OPTIONS
+.TP
+.B --target TARGET
+Build only this mock target (e.g. almalinux-9-x86_64).
+Can be repeated: \fB--target\fR \fIT1\fR \fB--target\fR \fIT2\fR
+.TP
+.B --no-sign
+Skip GPG signing inside the build container.
+.TP
+.B --platform ARCH
+Override docker platform. Valid values: \fBamd64\fR, \fBx86_64\fR, \fBarm64\fR, \fBaarch64\fR.
+.TP
+.B --update
+Re-install the latest version of this script.
+.TP
+.B --list-targets
+Print all enabled mock targets and exit.
+.TP
+.B --color
+Enable colored output. Automatically disabled if the \fBNO_COLOR\fR environment
+variable is set.
+.TP
+.B --no-color
+Disable colored output.
+.TP
+.B --debug
+Enable bash \fB-x\fR tracing.
+.TP
+.B -h, --help
+Show help message and exit.
+.TP
+.B -v, --version
+Show script version and exit.
+.SH ENVIRONMENT
+.TP
+.B NO_COLOR
+If set to any non-empty value, disables colored output automatically.
+.TP
+.B RPMBUILD_IMAGE
+Container image URI (default:
+.BR ghcr.io/rpm-devel/build:latest ).
+.TP
+.B RPMBUILD_FEDORA_VERSION
+Fedora version number (default: 42).
+.TP
+.B RPMBUILD_ENABLE_VERSION_7
+.TP
+.B RPMBUILD_ENABLE_VERSION_8
+.TP
+.B RPMBUILD_ENABLE_VERSION_9
+.TP
+.B RPMBUILD_ENABLE_VERSION_10
+.TP
+.B RPMBUILD_ENABLE_FEDORA
+Toggle target groups (default: 8, 9, 10, fedora enabled; 7 disabled).
+.TP
+.B RPMBUILD_HOST_RPMBUILD_DIR
+Host rpmbuild root directory (default:
+.BR $HOME/rpmbuild ).
+.TP
+.B RPMBUILD_HOST_BUILDS_DIR
+Host builds root directory (default:
+.BR $HOME/Documents/builds ).
+.TP
+.B RPMBUILD_GPG_KEY_ID
+GPG key identifier for signing RPMs.
+.TP
+.B RPMBUILD_CONTAINER_PREFIX
+Container name prefix (default:
+.BR rpmbuild ).
+.SH CONFIGURATION
+Settings are loaded from
+.B ~/.config/rpm-devel/settings.conf
+This file is auto-generated on first run.
+The file contains the following variables:
+.IP
+RPMBUILD_IMAGE, RPMBUILD_FEDORA_VERSION,
+RPMBUILD_ENABLE_VERSION_7/8/9/10, RPMBUILD_ENABLE_FEDORA,
+RPMBUILD_HOST_RPMBUILD_DIR, RPMBUILD_HOST_BUILDS_DIR,
+RPMBUILD_GPG_KEY_ID, RPMBUILD_CONTAINER_PREFIX
+.SH OUTPUT DIRECTORY STRUCTURE
+After successful builds, RPMs are moved from the container output directory
+into the make-repo-compatible tree:
+.B ~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/
+.SH SYMLINK RESOLUTION
+If entries under
+.B $RPMBUILD_HOST_RPMBUILD_DIR
+are symlinks into another checkout
+(e.g.
+.BR ~/rpmbuild/{repo} " -> " ~/Projects/.../rpm-devel/{repo} ),
+their real parent directories are auto-detected and bind-mounted (read-write)
+at the same absolute path so the symlinks resolve correctly inside the container.
+.SH EXAMPLES
+.TP
+List all enabled mock targets:
+.B rpmbuild --list-targets
+.TP
+Build a single package for all enabled targets:
+.B rpmbuild foo
+.TP
+Build for a specific target only:
+.B rpmbuild --target almalinux-9-x86_64 foo
+.TP
+Build all specs without signing:
+.B rpmbuild --no-sign
+.TP
+Override platform for ARM64:
+.B rpmbuild --platform arm64 foo
+.SH SEE ALSO
+.BR create-container.sh (1),
+.BR docker (1),
+.BR mock (1)
+.SH AUTHOR
+Jason Hempstead <git-admin@casjaysdev.pro>
+.SH LICENSE
+See LICENSE.md in the project repository.

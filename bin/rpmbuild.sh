@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-##@Version           :  202605220000-git
+##@Version           :  202607181900-git
 # @@Author           :  Jason Hempstead
 # @@Contact          :  git-admin@casjaysdev.pro
 # @@License          :  LICENSE.md
@@ -13,23 +13,30 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set -uo pipefail
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Color helpers
-__red() { printf '\033[0;31m%s\033[0m\n' "$*"; }
-__grn() { printf '\033[0;32m%s\033[0m\n' "$*"; }
-__yel() { printf '\033[0;33m%s\033[0m\n' "$*"; }
-__blu() { printf '\033[0;34m%s\033[0m\n' "$*"; }
-__bld() { printf '\033[1m%s\033[0m\n' "$*"; }
+VERSION="202607181900-git"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-__usage() {
+# Color helpers
+RPMBUILD_USE_COLOR="${RPMBUILD_USE_COLOR:-true}"
+if [ -n "${NO_COLOR:-}" ]; then
+  RPMBUILD_USE_COLOR="false"
+fi
+
+__red() { if [ "$RPMBUILD_USE_COLOR" = "true" ]; then printf '\033[0;31m%s\033[0m\n' "$*"; else printf '%s\n' "$*"; fi; }
+__grn() { if [ "$RPMBUILD_USE_COLOR" = "true" ]; then printf '\033[0;32m%s\033[0m\n' "$*"; else printf '%s\n' "$*"; fi; }
+__yel() { if [ "$RPMBUILD_USE_COLOR" = "true" ]; then printf '\033[0;33m%s\033[0m\n' "$*"; else printf '%s\n' "$*"; fi; }
+__blu() { if [ "$RPMBUILD_USE_COLOR" = "true" ]; then printf '\033[0;34m%s\033[0m\n' "$*"; else printf '%s\n' "$*"; fi; }
+__bld() { if [ "$RPMBUILD_USE_COLOR" = "true" ]; then printf '\033[1m%s\033[0m\n' "$*"; else printf '%s\n' "$*"; fi; }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+__help() {
   cat <<EOF
-Usage: $(\basename "$0") [OPTIONS] [specname]
+Usage: ${0##*/} [OPTIONS] [specname]
 
 Build RPM packages using ghcr.io/rpm-devel/build:latest.
 Each spec is built for every enabled mock target via the build container.
 
 Arguments:
   specname        Build only this package (matches basename without .spec).
-                  Omit to build all specs found under \$HOST_RPMBUILD_DIR.
+                  Omit to build all specs found under \$RPMBUILD_HOST_RPMBUILD_DIR.
 
 Options:
   --target TARGET Build only this mock target (e.g. almalinux-9-x86_64).
@@ -38,15 +45,19 @@ Options:
   --platform ARCH Override docker platform (linux/amd64 or linux/arm64).
   --update        Re-install the latest version of this script.
   --list-targets  Print all enabled mock targets and exit.
+  --debug         Enable bash -x tracing.
+  --color         Enable colored output (default unless NO_COLOR is set).
+  --no-color      Disable colored output.
   -h, --help      Show this help and exit.
+  -v, --version   Show script version and exit.
 
 Environment / settings (~/.config/rpm-devel/settings.conf):
-  BUILD_IMAGE         Container image (default: ghcr.io/rpm-devel/build:latest)
-  RPM_GPG_KEY_ID      GPG key identifier for signing
-  ENABLE_VERSION_7/8/9/10 / ENABLE_FEDORA   Toggle target groups
-  FEDORA_VERSION      Fedora version number (default: 42)
-  HOST_RPMBUILD_DIR   Host rpmbuild root (default: ~/rpmbuild)
-  HOST_BUILDS_DIR     Host builds root   (default: ~/Documents/builds)
+  RPMBUILD_IMAGE                 Container image (default: ghcr.io/rpm-devel/build:latest)
+  RPMBUILD_GPG_KEY_ID            GPG key identifier for signing
+  RPMBUILD_ENABLE_VERSION_7/8/9/10 / RPMBUILD_ENABLE_FEDORA   Toggle target groups
+  RPMBUILD_FEDORA_VERSION         Fedora version number (default: 42)
+  RPMBUILD_HOST_RPMBUILD_DIR     Host rpmbuild root (default: ~/rpmbuild)
+  RPMBUILD_HOST_BUILDS_DIR       Host builds root   (default: ~/Documents/builds)
 
 Output:
   After each build, RPMs are moved from the container output directory
@@ -54,7 +65,7 @@ Output:
     ~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/
 
 Note:
-  If entries under HOST_RPMBUILD_DIR are symlinks into another checkout
+  If entries under RPMBUILD_HOST_RPMBUILD_DIR are symlinks into another checkout
   (e.g. ~/rpmbuild/{repo} -> ~/Projects/.../rpm-devel/{repo}), their real
   parent directories are auto-detected and bind-mounted (read-write, since
   spectool writes downloaded sources into the package dir) at the same
@@ -63,29 +74,29 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Config defaults (overridden by settings.conf)
-BUILD_IMAGE="${BUILD_IMAGE:-ghcr.io/rpm-devel/build:latest}"
-FEDORA_VERSION="${FEDORA_VERSION:-42}"
-ENABLE_VERSION_7="${ENABLE_VERSION_7:-no}"
-ENABLE_VERSION_8="${ENABLE_VERSION_8:-yes}"
-ENABLE_VERSION_9="${ENABLE_VERSION_9:-yes}"
-ENABLE_VERSION_10="${ENABLE_VERSION_10:-yes}"
-ENABLE_FEDORA="${ENABLE_FEDORA:-yes}"
-HOST_RPMBUILD_DIR="${HOST_RPMBUILD_DIR:-$HOME/rpmbuild}"
-HOST_BUILDS_DIR="${HOST_BUILDS_DIR:-$HOME/Documents/builds}"
-RPM_GPG_KEY_ID="${RPM_GPG_KEY_ID:-}"
-CONTAINER_PREFIX="${CONTAINER_PREFIX:-rpmbuild}"
+RPMBUILD_IMAGE="${RPMBUILD_IMAGE:-ghcr.io/rpm-devel/build:latest}"
+RPMBUILD_FEDORA_VERSION="${RPMBUILD_FEDORA_VERSION:-42}"
+RPMBUILD_ENABLE_VERSION_7="${RPMBUILD_ENABLE_VERSION_7:-no}"
+RPMBUILD_ENABLE_VERSION_8="${RPMBUILD_ENABLE_VERSION_8:-yes}"
+RPMBUILD_ENABLE_VERSION_9="${RPMBUILD_ENABLE_VERSION_9:-yes}"
+RPMBUILD_ENABLE_VERSION_10="${RPMBUILD_ENABLE_VERSION_10:-yes}"
+RPMBUILD_ENABLE_FEDORA="${RPMBUILD_ENABLE_FEDORA:-yes}"
+RPMBUILD_HOST_RPMBUILD_DIR="${RPMBUILD_HOST_RPMBUILD_DIR:-$HOME/rpmbuild}"
+RPMBUILD_HOST_BUILDS_DIR="${RPMBUILD_HOST_BUILDS_DIR:-$HOME/Documents/builds}"
+RPMBUILD_GPG_KEY_ID="${RPMBUILD_GPG_KEY_ID:-}"
+RPMBUILD_CONTAINER_PREFIX="${RPMBUILD_CONTAINER_PREFIX:-rpmbuild}"
 
 # Load user config
-RPM_BUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
-RPM_BUILD_CONFIG_FILE="settings.conf"
-[ -f "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE" ] && \
-  . "$RPM_BUILD_CONFIG_DIR/$RPM_BUILD_CONFIG_FILE"
+RPMBUILD_CONFIG_DIR="$HOME/.config/rpm-devel"
+RPMBUILD_CONFIG_FILE="settings.conf"
+[ -f "$RPMBUILD_CONFIG_DIR/$RPMBUILD_CONFIG_FILE" ] && \
+  . "$RPMBUILD_CONFIG_DIR/$RPMBUILD_CONFIG_FILE"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Derived paths
-LOG_DIR="${HOST_BUILDS_DIR}/logs/rpmbuild"
-# Build output from container lands in HOST_BUILDS_DIR/{mock-target}/
+RPMBUILD_LOG_DIR="${RPMBUILD_HOST_BUILDS_DIR}/logs/rpmbuild"
+# Build output from container lands in RPMBUILD_HOST_BUILDS_DIR/{mock-target}/
 # after the build; we move it to the make-repo tree below.
-RPM_OUTPUT_BASE="${HOST_BUILDS_DIR}/rpmbuild"
+RPMBUILD_OUTPUT_BASE="${RPMBUILD_HOST_BUILDS_DIR}/rpmbuild"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Map a mock target name to the make-repo directory sub-path.
 # e.g. almalinux-9-x86_64 → RHEL/el9/x86_64
@@ -119,70 +130,88 @@ __target_to_outdir() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Parse arguments
-SINGLE_SPEC=""
-DO_SIGN=true
-FORCE_PLATFORM=""
-OVERRIDE_TARGETS=()
+RPMBUILD_SINGLE_SPEC=""
+RPMBUILD_DO_SIGN=true
+RPMBUILD_FORCE_PLATFORM=""
+RPMBUILD_OVERRIDE_TARGETS=()
 
-while [[ $# -gt 0 ]]; do
+RPMBUILD_setopts=$(\getopt -o "hv" \
+  --long "debug,help,version,update,target:,no-sign,platform:,list-targets,color,no-color" \
+  -n "${0##*/}" -- "$@" 2>/dev/null)
+eval set -- "${RPMBUILD_setopts[@]}" 2>/dev/null
+
+while :; do
   case "$1" in
-    update | --update)
+    --debug)
+      shift 1; set -xo pipefail
+      ;;
+    -h | --help)
+      __help; exit 0
+      ;;
+    -v | --version)
+      printf '%s\n' "$VERSION"; exit 0
+      ;;
+    --update)
+      shift 1
       \bash -c "$(\curl -q -LSsf "https://github.com/rpm-devel/tools/raw/main/install.sh")"
       exit $?
       ;;
     --target)
-      OVERRIDE_TARGETS+=("$2"); shift 2
+      RPMBUILD_OVERRIDE_TARGETS+=("$2"); shift 2
       ;;
     --no-sign)
-      DO_SIGN=false; shift
+      RPMBUILD_DO_SIGN=false; shift 1
       ;;
     --platform)
       case "$2" in
-        amd64|x86_64)  FORCE_PLATFORM="linux/amd64" ;;
-        arm64|aarch64) FORCE_PLATFORM="linux/arm64" ;;
-        *)             FORCE_PLATFORM="linux/$2" ;;
+        amd64|x86_64)  RPMBUILD_FORCE_PLATFORM="linux/amd64" ;;
+        arm64|aarch64) RPMBUILD_FORCE_PLATFORM="linux/arm64" ;;
+        *)             RPMBUILD_FORCE_PLATFORM="linux/$2" ;;
       esac
       shift 2
       ;;
     --list-targets)
-      # Print and exit — populated after arg parsing below
-      LIST_TARGETS_ONLY=true; shift
+      RPMBUILD_LIST_TARGETS_ONLY=true; shift 1
       ;;
-    -h | --help)
-      __usage; exit 0
+    --color)
+      RPMBUILD_USE_COLOR="true"; shift 1
       ;;
-    -*)
-      __red "Unknown option: $1"; __usage; exit 1
+    --no-color)
+      RPMBUILD_USE_COLOR="false"; shift 1
       ;;
-    *)
-      if [[ -n "${SINGLE_SPEC}" ]]; then
-        __red "Only one specname argument is allowed."
-        __usage; exit 1
-      fi
-      SINGLE_SPEC="$1"; shift
+    --)
+      shift 1; break
       ;;
   esac
 done
+
+if [[ $# -gt 0 ]]; then
+  if [[ -n "${RPMBUILD_SINGLE_SPEC}" ]]; then
+    __red "Only one specname argument is allowed."
+    __help; exit 1
+  fi
+  RPMBUILD_SINGLE_SPEC="$1"
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build the list of enabled mock targets
-ENABLED_TARGETS=()
-if [ "${#OVERRIDE_TARGETS[@]}" -gt 0 ]; then
-  ENABLED_TARGETS=("${OVERRIDE_TARGETS[@]}")
+RPMBUILD_ENABLED_TARGETS=()
+if [ "${#RPMBUILD_OVERRIDE_TARGETS[@]}" -gt 0 ]; then
+  RPMBUILD_ENABLED_TARGETS=("${RPMBUILD_OVERRIDE_TARGETS[@]}")
 else
-  [ "$ENABLE_VERSION_7"  = "yes" ] && ENABLED_TARGETS+=("eol/centos-7-x86_64" "eol/centos-7-aarch64")
-  [ "$ENABLE_VERSION_8"  = "yes" ] && ENABLED_TARGETS+=("almalinux-8-x86_64"  "almalinux-8-aarch64")
-  [ "$ENABLE_VERSION_9"  = "yes" ] && ENABLED_TARGETS+=("almalinux-9-x86_64"  "almalinux-9-aarch64")
-  [ "$ENABLE_VERSION_10" = "yes" ] && ENABLED_TARGETS+=("almalinux-10-x86_64" "almalinux-10-aarch64")
-  [ "$ENABLE_FEDORA"     = "yes" ] && ENABLED_TARGETS+=("fedora-${FEDORA_VERSION}-x86_64" "fedora-${FEDORA_VERSION}-aarch64")
+  [ "$RPMBUILD_ENABLE_VERSION_7"  = "yes" ] && RPMBUILD_ENABLED_TARGETS+=("eol/centos-7-x86_64" "eol/centos-7-aarch64")
+  [ "$RPMBUILD_ENABLE_VERSION_8"  = "yes" ] && RPMBUILD_ENABLED_TARGETS+=("almalinux-8-x86_64"  "almalinux-8-aarch64")
+  [ "$RPMBUILD_ENABLE_VERSION_9"  = "yes" ] && RPMBUILD_ENABLED_TARGETS+=("almalinux-9-x86_64"  "almalinux-9-aarch64")
+  [ "$RPMBUILD_ENABLE_VERSION_10" = "yes" ] && RPMBUILD_ENABLED_TARGETS+=("almalinux-10-x86_64" "almalinux-10-aarch64")
+  [ "$RPMBUILD_ENABLE_FEDORA"     = "yes" ] && RPMBUILD_ENABLED_TARGETS+=("fedora-${RPMBUILD_FEDORA_VERSION}-x86_64" "fedora-${RPMBUILD_FEDORA_VERSION}-aarch64")
 fi
 
-if [ "${#ENABLED_TARGETS[@]}" -eq 0 ]; then
-  __red "No build targets enabled. Edit ~/.config/rpm-devel/settings.conf"
+if [ "${#RPMBUILD_ENABLED_TARGETS[@]}" -eq 0 ]; then
+  __red "No build targets enabled. Edit $RPMBUILD_CONFIG_DIR/$RPMBUILD_CONFIG_FILE"
   exit 1
 fi
 
-if [ "${LIST_TARGETS_ONLY:-false}" = "true" ]; then
-  printf '%s\n' "${ENABLED_TARGETS[@]}"
+if [ "${RPMBUILD_LIST_TARGETS_ONLY:-false}" = "true" ]; then
+  printf '%s\n' "${RPMBUILD_ENABLED_TARGETS[@]}"
   exit 0
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -195,55 +224,55 @@ fi
 \clear
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Create directories
-\mkdir -p "${HOST_RPMBUILD_DIR}" "${HOST_BUILDS_DIR}" "${LOG_DIR}"
+\mkdir -p "${RPMBUILD_HOST_RPMBUILD_DIR}" "${RPMBUILD_HOST_BUILDS_DIR}" "${RPMBUILD_LOG_DIR}"
 
 # Fix GPG/SSH permissions
 \find "${HOME}/.gnupg" "${HOME}/.ssh" -type f -exec \chmod 600 {} \; 2>/dev/null || true
 \find "${HOME}/.gnupg" "${HOME}/.ssh" -type d -exec \chmod 700 {} \; 2>/dev/null || true
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# HOST_RPMBUILD_DIR entries are often symlinks into a separate checkout
+# RPMBUILD_HOST_RPMBUILD_DIR entries are often symlinks into a separate checkout
 # tree (e.g. ~/rpmbuild/{repo} -> ~/Projects/.../rpm-devel/{repo}). A plain
-# bind mount of HOST_RPMBUILD_DIR does not make symlink targets outside it
+# bind mount of RPMBUILD_HOST_RPMBUILD_DIR does not make symlink targets outside it
 # resolvable inside the container, so resolve each top-level symlink and
 # bind-mount its real parent directory at the identical absolute path.
-EXTRA_MOUNTS=()
-_seen_parents=()
-while IFS= read -r -d '' _link; do
-  _target="$(\readlink -f -- "${_link}" 2>/dev/null)" || continue
-  [ -z "${_target}" ] && continue
-  _parent="${_target%/*}"
-  _dup=false
-  for _p in "${_seen_parents[@]:-}"; do
-    [ "${_p}" = "${_parent}" ] && _dup=true && break
+RPMBUILD_EXTRA_MOUNTS=()
+RPMBUILD_seen_parents=()
+while IFS= read -r -d '' RPMBUILD_link; do
+  RPMBUILD_target="$(\readlink -f -- "${RPMBUILD_link}" 2>/dev/null)" || continue
+  [ -z "${RPMBUILD_target}" ] && continue
+  RPMBUILD_parent="${RPMBUILD_target%/*}"
+  RPMBUILD_dup=false
+  for RPMBUILD_p in "${RPMBUILD_seen_parents[@]:-}"; do
+    [ "${RPMBUILD_p}" = "${RPMBUILD_parent}" ] && RPMBUILD_dup=true && break
   done
-  "${_dup}" || { _seen_parents+=("${_parent}"); EXTRA_MOUNTS+=("-v" "${_parent}:${_parent}"); }
-done < <(\find "${HOST_RPMBUILD_DIR}" -maxdepth 1 -type l -print0 2>/dev/null)
+  "${RPMBUILD_dup}" || { RPMBUILD_seen_parents+=("${RPMBUILD_parent}"); RPMBUILD_EXTRA_MOUNTS+=("-v" "${RPMBUILD_parent}:${RPMBUILD_parent}"); }
+done < <(\find "${RPMBUILD_HOST_RPMBUILD_DIR}" -maxdepth 1 -type l -print0 2>/dev/null)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build spec list
-if [[ -n "${SINGLE_SPEC}" ]]; then
-  mapfile -t _found < <(\find -L "${HOST_RPMBUILD_DIR}" -name "${SINGLE_SPEC}.spec" 2>/dev/null)
-  if [[ ${#_found[@]} -eq 0 ]]; then
-    __red "No spec file found for '${SINGLE_SPEC}' under ${HOST_RPMBUILD_DIR}"
+if [[ -n "${RPMBUILD_SINGLE_SPEC}" ]]; then
+  mapfile -t RPMBUILD_found < <(\find -L "${RPMBUILD_HOST_RPMBUILD_DIR}" -name "${RPMBUILD_SINGLE_SPEC}.spec" 2>/dev/null)
+  if [[ ${#RPMBUILD_found[@]} -eq 0 ]]; then
+    __red "No spec file found for '${RPMBUILD_SINGLE_SPEC}' under ${RPMBUILD_HOST_RPMBUILD_DIR}"
     exit 1
   fi
-  if [[ ${#_found[@]} -gt 1 ]]; then
-    __yel "Multiple specs found for '${SINGLE_SPEC}'; using: ${_found[0]}"
+  if [[ ${#RPMBUILD_found[@]} -gt 1 ]]; then
+    __yel "Multiple specs found for '${RPMBUILD_SINGLE_SPEC}'; using: ${RPMBUILD_found[0]}"
   fi
-  spec_list=("${_found[0]}")
+  RPMBUILD_spec_list=("${RPMBUILD_found[0]}")
 else
-  mapfile -t spec_list < <(\find -L "${HOST_RPMBUILD_DIR}" -name '*.spec' | \sort)
-  if [[ ${#spec_list[@]} -eq 0 ]]; then
-    __red "No spec files found in ${HOST_RPMBUILD_DIR}"
+  mapfile -t RPMBUILD_spec_list < <(\find -L "${RPMBUILD_HOST_RPMBUILD_DIR}" -name '*.spec' | \sort)
+  if [[ ${#RPMBUILD_spec_list[@]} -eq 0 ]]; then
+    __red "No spec files found in ${RPMBUILD_HOST_RPMBUILD_DIR}"
     exit 1
   fi
-  printf '%s\n' "${spec_list[@]}" >"${LOG_DIR}/specs.txt"
+  printf '%s\n' "${RPMBUILD_spec_list[@]}" >"${RPMBUILD_LOG_DIR}/specs.txt"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Convert a host spec path to the container-side path.
 # Host: $HOME/rpmbuild/SPECS/foo.spec  →  Container: /root/rpmbuild/SPECS/foo.spec
 __host_to_container_path() {
   local host_path="$1"
-  local rel="${host_path#"${HOST_RPMBUILD_DIR}"}"
+  local rel="${host_path#"${RPMBUILD_HOST_RPMBUILD_DIR}"}"
   echo "/root/rpmbuild${rel}"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -253,8 +282,8 @@ __collect_rpms() {
   local target="$1"
   local outdir
   outdir="$(__target_to_outdir "$target")"
-  local src_dir="${HOST_BUILDS_DIR}/${target}"
-  local dst_dir="${RPM_OUTPUT_BASE}/${outdir}"
+  local src_dir="${RPMBUILD_HOST_BUILDS_DIR}/${target}"
+  local dst_dir="${RPMBUILD_OUTPUT_BASE}/${outdir}"
 
   if [ ! -d "${src_dir}" ] || [ -z "$(ls -A "${src_dir}" 2>/dev/null)" ]; then
     __yel "  No output in ${src_dir} — nothing to collect"
@@ -276,91 +305,91 @@ __collect_rpms() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Tracking
-succeeded=()
-failed=()
+RPMBUILD_succeeded=()
+RPMBUILD_failed=()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main build loop: for each spec, build every enabled target
-for spec_file in "${spec_list[@]}"; do
-  spec_name="$(\basename -- "${spec_file%.spec}")"
-  \mkdir -p "${LOG_DIR}/${spec_name}"
-  container_spec="$(__host_to_container_path "${spec_file}")"
+for spec_file in "${RPMBUILD_spec_list[@]}"; do
+  RPMBUILD_spec_name="${spec_file##*/}"; RPMBUILD_spec_name="${RPMBUILD_spec_name%.spec}"
+  \mkdir -p "${RPMBUILD_LOG_DIR}/${RPMBUILD_spec_name}"
+  RPMBUILD_container_spec="$(__host_to_container_path "${spec_file}")"
 
   __blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-  __bld "Package: ${spec_name}  $(\date +'%Y-%m-%d %H:%M:%S')"
+  __bld "Package: ${RPMBUILD_spec_name}  $(\date +'%Y-%m-%d %H:%M:%S')"
 
-  pkg_ok=true
+  RPMBUILD_pkg_ok=true
 
-  for target in "${ENABLED_TARGETS[@]}"; do
+  for target in "${RPMBUILD_ENABLED_TARGETS[@]}"; do
     __yel "  Target: ${target}"
 
-    ctr_name="${CONTAINER_PREFIX}-$(\tr -dc 'a-z0-9' </dev/urandom | \head -c8)"
+    RPMBUILD_ctr_name="${RPMBUILD_CONTAINER_PREFIX}-$(\tr -dc 'a-z0-9' </dev/urandom | \head -c8)"
 
-    local_macros=()
-    [ -f "$HOME/.rpmmacros" ] && local_macros=("-v" "$HOME/.rpmmacros:/root/.rpmmacros:ro")
+    RPMBUILD_local_macros=()
+    [ -f "$HOME/.rpmmacros" ] && RPMBUILD_local_macros=("-v" "$HOME/.rpmmacros:/root/.rpmmacros:ro")
 
-    platform_flag=()
-    [ -n "${FORCE_PLATFORM}" ] && platform_flag=("--platform" "${FORCE_PLATFORM}")
+    RPMBUILD_platform_flag=()
+    [ -n "${RPMBUILD_FORCE_PLATFORM}" ] && RPMBUILD_platform_flag=("--platform" "${RPMBUILD_FORCE_PLATFORM}")
 
-    gpg_flag=()
-    if "${DO_SIGN}" && [ -n "${RPM_GPG_KEY_ID}" ]; then
-      gpg_flag=("-e" "RPM_GPG_KEY_ID=${RPM_GPG_KEY_ID}")
+    RPMBUILD_gpg_flag=()
+    if "${RPMBUILD_DO_SIGN}" && [ -n "${RPMBUILD_GPG_KEY_ID}" ]; then
+      RPMBUILD_gpg_flag=("-e" "RPM_GPG_KEY_ID=${RPMBUILD_GPG_KEY_ID}")
     fi
 
-    target_start="${SECONDS}"
+    RPMBUILD_target_start="${SECONDS}"
     if \docker run --rm --privileged \
-        --name "${ctr_name}" \
-        "${platform_flag[@]}" \
-        -v "${HOST_RPMBUILD_DIR}:/root/rpmbuild" \
-        "${EXTRA_MOUNTS[@]}" \
-        -v "${HOST_BUILDS_DIR}:/root/Documents/builds" \
-        "${local_macros[@]}" \
+        --name "${RPMBUILD_ctr_name}" \
+        "${RPMBUILD_platform_flag[@]}" \
+        -v "${RPMBUILD_HOST_RPMBUILD_DIR}:/root/rpmbuild" \
+        "${RPMBUILD_EXTRA_MOUNTS[@]}" \
+        -v "${RPMBUILD_HOST_BUILDS_DIR}:/root/Documents/builds" \
+        "${RPMBUILD_local_macros[@]}" \
         -v "$HOME/.gnupg:/root/.gnupg:ro" \
         -e "RPM_TARGET=${target}" \
-        "${gpg_flag[@]}" \
-        "$BUILD_IMAGE" \
-        "${container_spec}" \
-          >>"${LOG_DIR}/${spec_name}/build-${target//\//-}.txt" \
-          2>>"${LOG_DIR}/${spec_name}/errors-${target//\//-}.txt"; then
-      target_elapsed=$(( SECONDS - target_start ))
-      __grn "  SUCCESS: ${spec_name} / ${target} (${target_elapsed}s)"
+        "${RPMBUILD_gpg_flag[@]}" \
+        "$RPMBUILD_IMAGE" \
+        "${RPMBUILD_container_spec}" \
+          >>"${RPMBUILD_LOG_DIR}/${RPMBUILD_spec_name}/build-${target//\//-}.txt" \
+          2>>"${RPMBUILD_LOG_DIR}/${RPMBUILD_spec_name}/errors-${target//\//-}.txt"; then
+      RPMBUILD_target_elapsed=$(( SECONDS - RPMBUILD_target_start ))
+      __grn "  SUCCESS: ${RPMBUILD_spec_name} / ${target} (${RPMBUILD_target_elapsed}s)"
       __collect_rpms "${target}"
     else
-      status_code="$?"
-      target_elapsed=$(( SECONDS - target_start ))
-      __red "  FAILED:  ${spec_name} / ${target} (exit ${status_code}, ${target_elapsed}s)"
-      __red "  See: ${LOG_DIR}/${spec_name}/errors-${target//\//-}.txt"
-      pkg_ok=false
+      RPMBUILD_status_code="$?"
+      RPMBUILD_target_elapsed=$(( SECONDS - RPMBUILD_target_start ))
+      __red "  FAILED:  ${RPMBUILD_spec_name} / ${target} (exit ${RPMBUILD_status_code}, ${RPMBUILD_target_elapsed}s)"
+      __red "  See: ${RPMBUILD_LOG_DIR}/${RPMBUILD_spec_name}/errors-${target//\//-}.txt"
+      RPMBUILD_pkg_ok=false
     fi
   done
 
-  if "${pkg_ok}"; then
-    succeeded+=("${spec_name}")
+  if "${RPMBUILD_pkg_ok}"; then
+    RPMBUILD_succeeded+=("${RPMBUILD_spec_name}")
   else
-    failed+=("${spec_name}")
+    RPMBUILD_failed+=("${RPMBUILD_spec_name}")
   fi
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Host-side signing pass (catches any RPMs the container didn't sign,
 # or provides signing when --no-sign was passed to suppress container signing)
-if "${DO_SIGN}"; then
-  gpg_key_count=0
+if "${RPMBUILD_DO_SIGN}"; then
+  RPMBUILD_gpg_key_count=0
   if \command -v gpg &>/dev/null; then
-    gpg_key_count=$(\gpg --list-secret-keys 2>/dev/null | \grep -c -- '^sec' || true)
+    RPMBUILD_gpg_key_count=$(\gpg --list-secret-keys 2>/dev/null | \grep -c -- '^sec' || true)
   fi
 
-  if [[ ${gpg_key_count} -gt 0 ]]; then
+  if [[ ${RPMBUILD_gpg_key_count} -gt 0 ]]; then
     __blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    __bld "Signing packages in ${RPM_OUTPUT_BASE}..."
-    mapfile -t _rpms < <(\find "${RPM_OUTPUT_BASE}" -iname '*.rpm' -not -iname '*.src.rpm' 2>/dev/null)
+    __bld "Signing packages in ${RPMBUILD_OUTPUT_BASE}..."
+    mapfile -t RPMBUILD_rpms < <(\find "${RPMBUILD_OUTPUT_BASE}" -iname '*.rpm' -not -iname '*.src.rpm' 2>/dev/null)
 
-    if [[ ${#_rpms[@]} -gt 0 ]]; then
-      if \rpmsign --addsign "${_rpms[@]}" 2>>"${LOG_DIR}/sign.err"; then
-        __grn "Signed ${#_rpms[@]} RPM(s)"
+    if [[ ${#RPMBUILD_rpms[@]} -gt 0 ]]; then
+      if \rpmsign --addsign "${RPMBUILD_rpms[@]}" 2>>"${RPMBUILD_LOG_DIR}/sign.err"; then
+        __grn "Signed ${#RPMBUILD_rpms[@]} RPM(s)"
       else
-        __yel "rpmsign reported errors — check ${LOG_DIR}/sign.err"
+        __yel "rpmsign reported errors — check ${RPMBUILD_LOG_DIR}/sign.err"
       fi
     else
-      __yel "No RPMs found to sign in ${RPM_OUTPUT_BASE}"
+      __yel "No RPMs found to sign in ${RPMBUILD_OUTPUT_BASE}"
     fi
   else
     __yel "No GPG secret key found — skipping host-side signing"
@@ -369,13 +398,13 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Summary
 __blu "# - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-__bld "Build summary (${#ENABLED_TARGETS[@]} target(s))"
-__grn "  Succeeded: ${#succeeded[@]}"
-for _pkg in "${succeeded[@]}"; do __grn "    + ${_pkg}"; done
-if [[ ${#failed[@]} -gt 0 ]]; then
-  __red "  Failed:    ${#failed[@]}"
-  for _pkg in "${failed[@]}"; do __red "    - ${_pkg}"; done
+__bld "Build summary (${#RPMBUILD_ENABLED_TARGETS[@]} target(s))"
+__grn "  Succeeded: ${#RPMBUILD_succeeded[@]}"
+for _pkg in "${RPMBUILD_succeeded[@]}"; do __grn "    + ${_pkg}"; done
+if [[ ${#RPMBUILD_failed[@]} -gt 0 ]]; then
+  __red "  Failed:    ${#RPMBUILD_failed[@]}"
+  for _pkg in "${RPMBUILD_failed[@]}"; do __red "    - ${_pkg}"; done
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-[[ ${#failed[@]} -eq 0 ]]
+[[ ${#RPMBUILD_failed[@]} -eq 0 ]]
 # end

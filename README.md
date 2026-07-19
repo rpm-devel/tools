@@ -88,10 +88,17 @@ create-container.sh remove
 | `list` | Print all available mock target names |
 | `remove` | Remove stale containers with the `rpmbuild-` prefix |
 | `7` / `8` / `9` / `10` | Enter with the matching AlmaLinux / CentOS target |
-| `fedora` | Enter with `fedora-{FEDORA_VERSION}-{arch}` |
+| `fedora` / `fedora-rawhide` | Enter with `fedora-{FEDORA_VERSION}-{arch}` or `fedora-rawhide-{arch}` |
+| *(any other name)* | Enter with a raw mock config name, e.g. `almalinux-9-x86_64` |
+| `--enter` | Equivalent to the `enter` command |
 | `--platform <arch>` | Force `linux/amd64` or `linux/arm64` |
 | `--image <name>` | Override the build image |
 | `--config` | (Re)generate `~/.config/rpm-devel/settings.conf` |
+| `--update` | Re-install the latest version of the tools |
+| `--color` / `--no-color` | Force colored output on/off (default: on unless `NO_COLOR` is set) |
+| `--debug` | Enable `bash -x` tracing |
+| `-h`, `--help` | Show usage and exit |
+| `-v`, `--version` | Show script version and exit |
 
 **Mounts (always applied):**
 
@@ -132,8 +139,22 @@ rpmbuild.sh --no-sign
 rpmbuild.sh --list-targets
 
 # Update tools
-rpmbuild.sh update
+rpmbuild.sh --update
 ```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--target TARGET` | Build only this mock target; repeatable (`--target T1 --target T2`) |
+| `--no-sign` | Skip GPG signing (both in-container and host-side) |
+| `--platform ARCH` | Override docker platform (`linux/amd64` or `linux/arm64`) |
+| `--update` | Re-install the latest version of this script |
+| `--list-targets` | Print all enabled mock targets and exit |
+| `--color` / `--no-color` | Force colored output on/off (default: on unless `NO_COLOR` is set) |
+| `--debug` | Enable `bash -x` tracing |
+| `-h`, `--help` | Show usage and exit |
+| `-v`, `--version` | Show script version and exit |
 
 **What it does:**
 
@@ -152,11 +173,13 @@ rpmbuild.sh update
 
 | Setting | Mock targets |
 |---------|-------------|
-| `ENABLE_VERSION_7=no` | `eol/centos-7-x86_64`, `eol/centos-7-aarch64` |
-| `ENABLE_VERSION_8=yes` | `almalinux-8-x86_64`, `almalinux-8-aarch64` |
-| `ENABLE_VERSION_9=yes` | `almalinux-9-x86_64`, `almalinux-9-aarch64` |
-| `ENABLE_VERSION_10=yes` | `almalinux-10-x86_64`, `almalinux-10-aarch64` |
-| `ENABLE_FEDORA=yes` | `fedora-{N}-x86_64`, `fedora-{N}-aarch64` |
+| `RPMBUILD_ENABLE_VERSION_7=no` | `eol/centos-7-x86_64`, `eol/centos-7-aarch64` |
+| `RPMBUILD_ENABLE_VERSION_8=yes` | `almalinux-8-x86_64`, `almalinux-8-aarch64` |
+| `RPMBUILD_ENABLE_VERSION_9=yes` | `almalinux-9-x86_64`, `almalinux-9-aarch64` |
+| `RPMBUILD_ENABLE_VERSION_10=yes` | `almalinux-10-x86_64`, `almalinux-10-aarch64` |
+| `RPMBUILD_ENABLE_FEDORA=yes` | `fedora-{N}-x86_64`, `fedora-{N}-aarch64` |
+
+`--target` on the command line overrides all of the above for that run.
 
 **Output:**
 - Built RPMs: `~/Documents/builds/rpmbuild/{DISTRO}/{rel}{VER}/{ARCH}/`
@@ -184,11 +207,18 @@ make-repo --name el --version 9 --arch x86_64
 
 # Skip remote sync
 make-repo --skip-ftp --skip-sourceforge
+
+# Trace execution for debugging
+make-repo --debug
+
+# Self-update from the tools repo
+make-repo update
 ```
 
 **What it does:**
 
-1. Signs all RPMs and SRPMs under `~/Documents/builds/rpmbuild/` with `rpm --addsign`
+1. Signs all RPMs (`~/Documents/builds/rpmbuild/…`) and SRPMs
+   (`~/Documents/builds/sourceforge/…/srpms/`) with `rpm --addsign`
 2. Moves SRPMs into the release tree's `srpms/` directory
 3. Moves `*debuginfo*` / `*debugsource*` RPMs into `debug/`
 4. Runs `createrepo_c` on `rpms/`, `addons/`, `extras/`, `debug/`, and `srpms/`
@@ -249,11 +279,14 @@ create-mirror -v 9 --no-sign
 | `-r, --repos` | Comma-separated repo IDs to sync (default: all enabled) |
 | `--dry-run` | Show what would be synced without doing it |
 | `--no-sign` | Skip re-signing packages after sync |
+| `--config` | Generate the settings config file and exit |
 
 **Mirror layout** (root: `/var/ftp/pub/mirror`):
 
 ```
 {RHEL,CentOS,Fedora}/{VER}/{ARCH}/
+  rpms/     Created but not populated — CasjaysDev packages are built
+            locally, not mirrored here
   addons/   OS base, third-party (Docker, MariaDB, PostgreSQL, Remi, etc.)
   extras/   Community repos (EPEL, RPMFusion, ELRepo)
   debug/    debuginfo and debugsource RPMs
@@ -285,9 +318,35 @@ Useful when configuring a new host or a manually created container.
 In the normal workflow this step is not needed — `rpmbuild.sh` handles
 everything inside the build container automatically.
 
+Must be run as root.
+
 ```shell
+# Full bootstrap
 bootstrap
+
+# Skip copying /etc/skel files
+bootstrap --no-skel
+
+# Skip downloading .rpmmacros
+bootstrap --no-macros
+
+# Force-overwrite an existing ~/.rpmmacros
+bootstrap --force-macros
+
+# Install additional packages listed one-per-line in a file
+bootstrap --packages /path/to/pkgs.txt
 ```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Show help message and exit |
+| `-v, --version` | Show version and exit |
+| `--no-skel` | Skip copying `/etc/skel` files |
+| `--no-macros` | Skip downloading `.rpmmacros` |
+| `--force-macros` | Overwrite an existing `~/.rpmmacros` |
+| `--packages FILE` | Read additional package names from `FILE` (one per line) |
 
 ---
 
@@ -305,6 +364,10 @@ bogusDate *.spec
 
 RPM rejects changelogs where the weekday does not match the calendar date
 (e.g. `Thu` written for a Friday). Run `bogusDate` before every commit.
+
+Each spec is backed up in place before editing
+(`packagename.spec-YYYY-MM-DD-HH-MM-SS-NNNNNNNNNZ`), and a unified diff of
+the change is printed to stdout.
 
 ---
 
@@ -324,21 +387,71 @@ Generate the default `settings.conf`:
 create-container.sh --config
 ```
 
+## Man pages & completions
+
+Man pages live in `man/` (`rpmbuild.1`, `create-container.1`) and bash
+completions live in `completions/` (`_rpmbuild_completions.bash`,
+`_create-container_completions.bash`). To use them locally:
+
+```shell
+# Man pages
+export MANPATH="$PWD/man:$MANPATH"
+man rpmbuild
+man create-container
+
+# Completions
+source completions/_rpmbuild_completions.bash
+source completions/_create-container_completions.bash
+```
+
 ## Environment variables
+
+`create-container.sh --config` writes both prefixes for shared settings, so
+editing `~/.config/rpm-devel/settings.conf` once covers both scripts.
+
+**`rpmbuild.sh` (`RPMBUILD_` prefix):**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BUILD_IMAGE` | `ghcr.io/rpm-devel/build:latest` | Build container image |
-| `RPM_GPG_KEY_ID` | *(from `.rpmmacros`)* | GPG key for signing built RPMs |
-| `ENABLE_VERSION_7` | `no` | Build EL7 targets |
-| `ENABLE_VERSION_8` | `yes` | Build EL8 targets |
-| `ENABLE_VERSION_9` | `yes` | Build EL9 targets |
-| `ENABLE_VERSION_10` | `yes` | Build EL10 targets |
-| `ENABLE_FEDORA` | `yes` | Build Fedora targets |
-| `FEDORA_VERSION` | `42` | Fedora version number |
+| `RPMBUILD_IMAGE` | `ghcr.io/rpm-devel/build:latest` | Build container image |
+| `RPMBUILD_GPG_KEY_ID` | *(unset — use `.rpmmacros` `%_gpg_name`)* | GPG key ID/name for signing built RPMs |
+| `RPMBUILD_ENABLE_VERSION_7` | `no` | Build EL7 targets |
+| `RPMBUILD_ENABLE_VERSION_8` | `yes` | Build EL8 targets |
+| `RPMBUILD_ENABLE_VERSION_9` | `yes` | Build EL9 targets |
+| `RPMBUILD_ENABLE_VERSION_10` | `yes` | Build EL10 targets |
+| `RPMBUILD_ENABLE_FEDORA` | `yes` | Build Fedora targets |
+| `RPMBUILD_FEDORA_VERSION` | `42` | Fedora version number |
+| `RPMBUILD_HOST_RPMBUILD_DIR` | `~/rpmbuild` | Host rpmbuild root (mounted into the container) |
+| `RPMBUILD_HOST_BUILDS_DIR` | `~/Documents/builds` | Host builds root (mounted into the container) |
+| `RPMBUILD_CONTAINER_PREFIX` | `rpmbuild` | Container name prefix, used to track/remove stale containers |
+| `RPMBUILD_USE_COLOR` | `true` | Colored output; forced `false` if `NO_COLOR` is set |
+
+**`create-container.sh` (`CREATE_CONTAINER_` prefix):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CREATE_CONTAINER_IMAGE` | `ghcr.io/rpm-devel/build:latest` | Build container image |
+| `CREATE_CONTAINER_FEDORA_VERSION` | `42` | Fedora version for the `fedora` shortcut |
+| `CREATE_CONTAINER_HOST_RPMBUILD_DIR` | `~/rpmbuild` | Host rpmbuild root (mounted into the container) |
+| `CREATE_CONTAINER_HOST_BUILDS_DIR` | `~/Documents/builds` | Host builds root (mounted into the container) |
+| `CREATE_CONTAINER_PREFIX` | `rpmbuild` | Container name prefix, used to track/remove stale containers |
+| `CREATE_CONTAINER_USE_COLOR` | `true` | Colored output; forced `false` if `NO_COLOR` is set |
+
+**`make-repo`:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `SOURCEFORGE_USER` | *(required for sync)* | Your SourceForge username |
 | `FTP_USER` | `root` | FTP server username |
+
+**`create-mirror`:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `MIRROR_ROOT` | `/var/ftp/pub/mirror` | Root of the local mirror tree |
+
+**Shared with every script:** `NO_COLOR` — set (any value) to disable ANSI
+color output regardless of the script-specific `*_USE_COLOR` setting.
 
 ## Supported platforms
 

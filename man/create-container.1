@@ -1,0 +1,180 @@
+.TH "CREATE-CONTAINER" "1" "2026-07-18" "create-container 202607181900-git" "User Commands"
+.SH NAME
+create-container \- pull and manage the rpm-devel build container
+.SH SYNOPSIS
+.B create-container
+[\fIOPTIONS\fR]
+.I COMMAND
+[\fIargs\fR]
+.SH DESCRIPTION
+.B create-container
+pulls and manages the ghcr.io/rpm-devel/build container image.
+It provides shortcuts for entering an interactive shell within the build container,
+optionally targeting specific mock build configurations.
+.SH COMMANDS
+.TP
+.B pull
+.PD 0
+.TP
+.B all
+.TP
+.B update
+Pull (or update) the container image.
+.PD
+.TP
+.B enter
+Start an interactive shell in the build container.
+.TP
+.B list
+List all available mock build targets.
+.TP
+.B remove
+Remove stale build containers (not the image itself).
+.TP
+.B 7 [\fIarch\fR]
+.TP
+.B 8 [\fIarch\fR]
+.TP
+.B 9 [\fIarch\fR]
+.TP
+.B 10 [\fIarch\fR]
+Enter the container with \fBRPM_TARGET\fR set to the specified version
+and architecture. \fIarch\fR may be one of:
+.RS
+.TP
+.B amd64
+Linux x86_64 (default).
+.TP
+.B arm64
+Linux ARM64.
+.RE
+.TP
+.B fedora [\fIarch\fR]
+Enter with \fBRPM_TARGET\fR set to
+.B fedora-${FEDORA_VERSION}-{arch}
+.TP
+.B fedora-rawhide [\fIarch\fR]
+Enter with \fBRPM_TARGET\fR set to
+.B fedora-rawhide-{arch}
+.SH OPTIONS
+.TP
+.B --color
+Enable colored output. Automatically disabled if the \fBNO_COLOR\fR environment
+variable is set.
+.TP
+.B --no-color
+Disable colored output.
+.TP
+.B --debug
+Enable bash \fB-x\fR tracing. Also sets \fBSCRIPT_OPTS=--debug\fR
+and \fB_DEBUG=on\fR.
+.TP
+.B --enter
+Equivalent to running the \fBenter\fR command.
+.TP
+.B -h, --help
+Show help message and exit.
+.TP
+.B -v, --version
+Show script version and exit.
+.TP
+.B --platform ARCH
+Override the docker platform. Valid values: \fBamd64\fR, \fBx86_64\fR, \fBarm64\fR, \fBaarch64\fR.
+.TP
+.B --image IMAGE
+Override the build container image.
+.TP
+.B --config
+(Re)generate the settings file at
+.B ~/.config/rpm-devel/settings.conf
+and exit.
+.TP
+.B --update
+Re-install the latest version of these tools.
+.SH ENVIRONMENT
+.TP
+.B NO_COLOR
+If set to any non-empty value, disables colored output automatically.
+.TP
+.B CREATE_CONTAINER_HOST_RPMBUILD_DIR
+Host rpmbuild root directory (default:
+.BR $HOME/rpmbuild ).
+Mounted into the container at
+.B /root/rpmbuild
+.TP
+.B CREATE_CONTAINER_HOST_BUILDS_DIR
+Host builds root directory (default:
+.BR $HOME/Documents/builds ).
+Mounted into the container at
+.B /root/Documents/builds
+.TP
+.B CREATE_CONTAINER_IMAGE
+Container image URI (default:
+.BR ghcr.io/rpm-devel/build:latest ).
+.TP
+.B CREATE_CONTAINER_FEDORA_VERSION
+Fedora version for \fBfedora\fR shortcut (default: 42).
+.TP
+.B CREATE_CONTAINER_PREFIX
+Container name prefix (default:
+.BR rpmbuild ).
+Used by the \fBremove\fR command to find stale containers.
+.SH CONFIGURATION
+Settings are loaded from
+.B ~/.config/rpm-devel/settings.conf
+This file is auto-generated on first run or can be regenerated with
+.B --config
+.SH MOUNT POINTS
+The following directories are always mounted (read-write unless noted):
+.TP
+.B $CREATE_CONTAINER_HOST_RPMBUILD_DIR
+Host rpmbuild root, mounted at
+.B /root/rpmbuild
+in the container.
+.TP
+.B $CREATE_CONTAINER_HOST_BUILDS_DIR
+Host builds root, mounted at
+.B /root/Documents/builds
+in the container.
+.TP
+.B ~/.rpmmacros
+User's rpmmacros file (read-only), mounted at
+.B /root/.rpmmacros
+.TP
+.B ~/.gnupg
+User's gpg configuration (read-only), mounted at
+.B /root/.gnupg
+.SH SYMLINK RESOLUTION
+If entries under
+.B $CREATE_CONTAINER_HOST_RPMBUILD_DIR
+are symlinks into another checkout
+(e.g.
+.BR ~/rpmbuild/{repo} " -> " ~/Projects/.../rpm-devel/{repo} ),
+their real parent directories are auto-detected and bind-mounted (read-write)
+at the same absolute path so the symlinks resolve correctly inside the container.
+.SH EXAMPLES
+.TP
+Pull the latest build image:
+.B create-container pull
+.TP
+Enter the container with AlmaLinux 9 target (x86_64):
+.B create-container 9
+.TP
+Enter with a custom mock target:
+.B create-container almalinux-9-x86_64
+.TP
+List available targets:
+.B create-container list
+.TP
+Remove stale containers:
+.B create-container remove
+.TP
+Enable debug output and enter the container:
+.B create-container --debug --enter
+.SH SEE ALSO
+.BR rpmbuild.sh (1),
+.BR docker (1)
+.SH AUTHOR
+Jason Hempstead <git-admin@casjaysdev.pro>
+.SH LICENSE
+See LICENSE.md in the project repository.
