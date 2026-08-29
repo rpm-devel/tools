@@ -299,9 +299,27 @@ __collect_rpms() {
 
   if [ "$count" -gt 0 ]; then
     __grn "  Collected ${count} RPM(s) → ${dst_dir}"
+    __refresh_local_repo "${dst_dir}"
   fi
   # Clean up the now-empty target output dir
   \rmdir "${src_dir}" 2>/dev/null || true
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Refresh repodata for a just-updated output dir so intra-org BuildRequires
+# (e.g. GeoIP-devel for mod_geoip) are immediately resolvable by mock's
+# casjay-local repo (see .github/docker/rootfs/etc/mock/site-defaults.cfg)
+# on the NEXT package build — this is why processing order matters: a
+# package's own intra-org dependencies must finish building (and land here)
+# before a dependent package is attempted.
+__refresh_local_repo() {
+  local dir="$1"
+  if ! \command -v createrepo_c &>/dev/null; then
+    __yel "  createrepo_c not found on host — skipping local repo refresh for ${dir}"
+    return 0
+  fi
+  if ! \createrepo_c --update --quiet "${dir}" >>"${RPMBUILD_LOG_DIR}/createrepo.log" 2>&1; then
+    __yel "  createrepo_c refresh failed for ${dir} — see ${RPMBUILD_LOG_DIR}/createrepo.log"
+  fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Tracking

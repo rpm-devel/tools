@@ -111,6 +111,28 @@
 1. `create-mirror --version 10` — download upstream, re-sign, createrepo
 2. `make-repo --version 10` — sync to SourceForge
 
+### Intra-org build dependencies (casjay-local repo)
+Some specs `BuildRequires` a package this org builds itself rather than one
+available in the base AlmaLinux/EPEL repos (e.g. `mod_geoip` needs
+`GeoIP-devel` from this org's own `GeoIP` package). To resolve this without
+depending on SourceForge/network availability mid-batch, the build image
+(`.github/docker/rootfs/etc/mock/site-defaults.cfg`) defines a local mock
+repo, `casjay-local`, pointing at
+`/root/Documents/builds/rpmbuild/RHEL/el<VER>/<ARCH>` — the same host dir
+`rpmbuild.sh` already collects signed RPMs into, bind-mounted one level
+further into the mock chroot itself.
+
+`rpmbuild.sh` keeps that dir's repodata current automatically: after every
+successful build, `__collect_rpms` calls `__refresh_local_repo`
+(`createrepo_c --update`) on the output dir. This means **build order
+matters** — a prerequisite package (e.g. `GeoIP`) must finish building
+across all needed targets before a dependent package (e.g. `mod_geoip`) is
+attempted, so its repodata exists when the dependent's mock build runs.
+Until that repodata exists, the `casjay-local` repo definition is a no-op
+(guarded in `site-defaults.cfg`), not a hard failure — it degrades to
+today's "dependency unresolved" behavior rather than crashing unrelated
+builds. Scoped to `almalinux-*` targets only.
+
 ## TODO
 
 - [ ] Test full build cycle for all 77 packages
