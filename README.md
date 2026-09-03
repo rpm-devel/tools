@@ -1,6 +1,6 @@
 # rpm-devel tools
 
-Build, package, sign, and distribute RPMs for RHEL 7–10, Fedora, and derivatives
+Build, package, sign, and distribute RPMs for EL 7–10, Fedora, and derivatives
 (AlmaLinux, Rocky, Oracle Linux, CentOS).
 
 All builds run inside `ghcr.io/rpm-devel/build:latest` — a single container image
@@ -246,11 +246,11 @@ This layout is mirrored verbatim to FTP and SourceForge.
 ### create-mirror
 
 Downloads upstream repos to a local mirror tree using `reposync`.
-Supports RHEL/AlmaLinux, CentOS (vault), and Fedora.
+Supports EL/AlmaLinux, CentOS (vault), and Fedora.
 Only the newest RPM for each package is kept (`--newest-only`).
 
 ```shell
-# Mirror RHEL/AlmaLinux 9 (defaults to host arch)
+# Mirror EL/AlmaLinux 9 (defaults to host arch)
 create-mirror -v 9
 
 # Mirror CentOS 7 from vault (x86_64 only)
@@ -284,13 +284,13 @@ create-mirror -v 9 --no-sign
 **Mirror layout** (root: `/var/ftp/pub/mirror`):
 
 ```
-{RHEL,CentOS,Fedora}/{VER}/{ARCH}/
+{EL,CentOS,Fedora}/{VER}/{ARCH}/
   rpms/     Created but not populated — CasjaysDev packages are built
             locally, not mirrored here
   addons/   OS base, third-party (Docker, MariaDB, PostgreSQL, Remi, etc.)
   extras/   Community repos (EPEL, RPMFusion, ELRepo)
   debug/    debuginfo and debugsource RPMs
-{RHEL,CentOS,Fedora}/{VER}/
+{EL,CentOS,Fedora}/{VER}/
   srpms/    source RPMs (arch-independent)
 ```
 
@@ -458,7 +458,7 @@ color output regardless of the script-specific `*_USE_COLOR` setting.
 - **Build host:** x86_64 Linux with Docker
 - **Build container:** `ghcr.io/rpm-devel/build:latest` (Fedora-based, multi-arch)
 - **Target arches:** x86_64, aarch64 — mock handles cross-arch builds inside the container
-- **Target distros:** RHEL/AlmaLinux/Rocky/Oracle 8–10, CentOS 7 (EOL), Fedora current + rawhide
+- **Target distros:** EL/AlmaLinux/Rocky/Oracle 8–10, CentOS 7 (EOL), Fedora current + rawhide
 
 ## Spec Repo Layout
 

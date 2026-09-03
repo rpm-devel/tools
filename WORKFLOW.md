@@ -9,15 +9,15 @@
   [rpmbuild.sh]     Build RPMs from spec files
        |
        v
-  ~/Documents/builds/rpmbuild/RHEL/el{VER}/{ARCH}/
+  ~/Documents/builds/rpmbuild/EL/el{VER}/{ARCH}/
        |
        v
   [make-repo]        Sign, organize, createrepo, sync to SF
        |
        v
-  SourceForge FRS    /RHEL/{VER}/{ARCH}/{casjay,os,langs,databases,infra,extras,kernel,debug}
-  SourceForge Web    /repo/RHEL/{VER}/{ARCH}/{casjay,os,langs,databases,infra,extras,kernel,debug}
-  Local FTP          /repo/RHEL/{VER}/{ARCH}/{casjay,os,langs,databases,infra,extras,kernel,debug}
+  SourceForge FRS    /EL/{VER}/{ARCH}/{casjay,os,langs,databases,infra,extras,kernel,debug}
+  SourceForge Web    /repo/EL/{VER}/{ARCH}/{casjay,os,langs,databases,infra,extras,kernel,debug}
+  Local FTP          /repo/EL/{VER}/{ARCH}/{casjay,os,langs,databases,infra,extras,kernel,debug}
        |
        v
   [casjay-release]   Repo config installed on end-user systems
@@ -32,10 +32,10 @@
 ```
 ~/rpmbuild/                          # Spec files + sources (per-package dirs)
 ~/Documents/builds/
-  rpmbuild/RHEL/el{VER}/
+  rpmbuild/EL/el{VER}/
     SRPMS/                           # Source RPMs
     {ARCH}/rpms/                     # Binary RPMs
-  sourceforge/RHEL/el{VER}/{ARCH}/
+  sourceforge/EL/el{VER}/{ARCH}/
     casjay/                          # CasjaysDev packages (signed)
     testing/                         # Pre-release testing
     os/                              # Upstream base OS mirror
@@ -51,27 +51,27 @@
 
 ### SourceForge FRS
 ```
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/casjay/
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/os/
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/langs/
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/databases/
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/infra/
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/extras/
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/kernel/
-/home/frs/project/rpm-devel/RHEL/{VER}/{ARCH}/debug/
-/home/frs/project/rpm-devel/RHEL/{VER}/sources/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/casjay/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/os/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/langs/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/databases/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/infra/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/extras/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/kernel/
+/home/frs/project/rpm-devel/EL/{VER}/{ARCH}/debug/
+/home/frs/project/rpm-devel/EL/{VER}/sources/
 ```
 
 ### SourceForge Web
 ```
-/home/project-web/rpm-devel/htdocs/repo/RHEL/{VER}/{ARCH}/casjay/
-/home/project-web/rpm-devel/htdocs/repo/RHEL/{VER}/{ARCH}/os/
+/home/project-web/rpm-devel/htdocs/repo/EL/{VER}/{ARCH}/casjay/
+/home/project-web/rpm-devel/htdocs/repo/EL/{VER}/{ARCH}/os/
 ...same structure as FRS...
 ```
 
 ### Local Mirror (create-mirror)
 ```
-~/Documents/builds/mirror/RHEL/{VER}/{ARCH}/
+~/Documents/builds/mirror/EL/{VER}/{ARCH}/
   base/                              # Upstream base OS + third-party (latest only, re-signed)
   updates/                           # Upstream updates + EPEL/ELRepo/Remi/etc (latest only, re-signed)
   rpms/                              # YOUR rpm-devel built packages
@@ -118,7 +118,7 @@ available in the base AlmaLinux/EPEL repos (e.g. `mod_geoip` needs
 depending on SourceForge/network availability mid-batch, the build image
 (`.github/docker/rootfs/etc/mock/site-defaults.cfg`) defines a local mock
 repo, `casjay-local`, pointing at
-`/root/Documents/builds/rpmbuild/RHEL/el<VER>/<ARCH>` — the same host dir
+`/root/Documents/builds/rpmbuild/EL/el<VER>/<ARCH>` — the same host dir
 `rpmbuild.sh` already collects signed RPMs into, bind-mounted one level
 further into the mock chroot itself.
 

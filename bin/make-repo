@@ -29,12 +29,16 @@ RUN_USER="${SUDO_USER:-$USER}"
 SRC_DIR="${BASH_SOURCE%/*}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Color definitions
-CLR_RESET="\033[0m"
-CLR_RED="\033[0;31m"
-CLR_GREEN="\033[0;32m"
-CLR_YELLOW="\033[0;33m"
-CLR_CYAN="\033[0;36m"
-CLR_BOLD="\033[1m"
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  CLR_RESET="\033[0m"
+  CLR_RED="\033[0;31m"
+  CLR_GREEN="\033[0;32m"
+  CLR_YELLOW="\033[0;33m"
+  CLR_CYAN="\033[0;36m"
+  CLR_BOLD="\033[1m"
+else
+  CLR_RESET="" CLR_RED="" CLR_GREEN="" CLR_YELLOW="" CLR_CYAN="" CLR_BOLD=""
+fi
 
 # Summary tracking
 SUMMARY_SYNCED=()
@@ -68,7 +72,7 @@ SKIP_SOURCEFORGE="false"
 DRY_RUN="false"
 
 SHORTOPTS="a:,n:,v:"
-LONGOPTS="version:,arch:,name:,dry-run,skip-ftp,skip-sourceforge,help"
+LONGOPTS="version,ver:,arch:,name:,dry-run,skip-ftp,skip-sourceforge,help"
 setopts=$(getopt -o "$SHORTOPTS" --long "$LONGOPTS" -n "$APPNAME" -- "$@" 2>/dev/null)
 eval set -- "${setopts[@]}" 2>/dev/null
 while :; do
@@ -81,7 +85,10 @@ while :; do
     SET_NAME="$2"
     shift 2
     ;;
-  -v | --version)
+  --version)
+    printf '%s\n' "$APPNAME $VERSION"; exit 0
+    ;;
+  -v | --ver)
     SET_VERSION="$2"
     shift 2
     ;;
@@ -103,12 +110,13 @@ Usage: ${APPNAME} [OPTIONS]
 
   -a, --arch ARCH            Target architecture (default: $(uname -m))
   -n, --name NAME            Distribution name (default: from rpmmacros or 'el')
-  -v, --version VERSION      Distribution version (default: from /etc/os-release)
+  -v, --ver VERSION          Distribution version (default: from /etc/os-release)
       --dry-run              Show what would be done without doing it
       --skip-ftp             Skip FTP sync step
       --skip-sourceforge     Skip SourceForge sync steps
       --debug                Enable bash -x tracing
       --help                 Show this help
+      --version              Show script version and exit
 
 HELP
     exit 0
@@ -124,11 +132,11 @@ ARCH="$SET_ARCH"
 VERNAME="$SET_NAME"
 VERNUM="$SET_VERSION"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-DISTRO="RHEL"
+DISTRO="EL"
 RELEASE="el"
 ARCH="${ARCH:-$(uname -m)}"
 VERNAME="${VERNAME:-$(grep -s -- '%_osver ' "$HOME/.rpmmacros" | awk -F ' ' '{print $2}' | sed 's|%.*||g' | grep -- '^' || echo "$RELEASE")}"
-VERNUM="${VERNUM:-$(grep -s -- '^VERSION=' /etc/os-release 2>/dev/null | awk -F= '{print $2}' | sed 's|"||g' | tr ' ' '\n' | grep -- '[0-9]' | awk -F '.' '{print $1}' | grep -- '^' || echo "")}"
+VERNUM="${VERNUM:-$(awk -F= '/^VERSION_ID=/{gsub(/"/, "", $2); print $2}' /etc/os-release 2>/dev/null || echo "")}"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Local FTP server address
 FTP_DOMAIN="ftp.casjaysdev.pro"
@@ -227,7 +235,7 @@ __safe_rsync() {
   local files
   # Use find on directory sources, glob expansion for patterns
   if [ -d "${src}" ]; then
-    files=$(find "${src}" -maxdepth 1 -type f 2>/dev/null | head -1)
+    files=$(find "${src}" -maxdepth 1 -type f -print -quit 2>/dev/null)
   else
     # Glob expansion
     local expanded

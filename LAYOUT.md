@@ -3,13 +3,13 @@
 ## Directory Structure
 
 ```
-RHEL/{VER}/{ARCH}/
+EL/{VER}/{ARCH}/
   rpms/        CasjaysDev custom-built packages
   addons/      Upstream third-party mirrors (OS, langs, databases, infra)
   extras/      Community extras (EPEL, RPM Fusion, Ghettoforge, ELRepo)
   debug/       All debuginfo/debugsource RPMs
 
-RHEL/{VER}/
+EL/{VER}/
   srpms/       Source RPMs (shared across arches — stored once per version)
 
 Fedora/{VER}/{ARCH}/
@@ -69,11 +69,11 @@ All .src.rpm files — from local builds and upstream mirrors.
 
 | Mirror File | SF Path |
 |------------|---------|
-| ZREPO/RHEL/{VER}/{ARCH}/mirrors/rpms | /RHEL/{VER}/{ARCH}/rpms |
-| ZREPO/RHEL/{VER}/{ARCH}/mirrors/addons | /RHEL/{VER}/{ARCH}/addons |
-| ZREPO/RHEL/{VER}/{ARCH}/mirrors/extras | /RHEL/{VER}/{ARCH}/extras |
-| ZREPO/RHEL/{VER}/{ARCH}/mirrors/debug | /RHEL/{VER}/{ARCH}/debug |
-| ZREPO/RHEL/{VER}/mirrors/srpms | /RHEL/{VER}/srpms |
+| ZREPO/EL/{VER}/{ARCH}/mirrors/rpms | /EL/{VER}/{ARCH}/rpms |
+| ZREPO/EL/{VER}/{ARCH}/mirrors/addons | /EL/{VER}/{ARCH}/addons |
+| ZREPO/EL/{VER}/{ARCH}/mirrors/extras | /EL/{VER}/{ARCH}/extras |
+| ZREPO/EL/{VER}/{ARCH}/mirrors/debug | /EL/{VER}/{ARCH}/debug |
+| ZREPO/EL/{VER}/mirrors/srpms | /EL/{VER}/srpms |
 
 ## Spec Repo Layout
 

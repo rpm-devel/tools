@@ -99,18 +99,18 @@ RPMBUILD_LOG_DIR="${RPMBUILD_HOST_BUILDS_DIR}/logs/rpmbuild"
 RPMBUILD_OUTPUT_BASE="${RPMBUILD_HOST_BUILDS_DIR}/rpmbuild"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Map a mock target name to the make-repo directory sub-path.
-# e.g. almalinux-9-x86_64 → RHEL/el9/x86_64
+# e.g. almalinux-9-x86_64 → EL/el9/x86_64
 __target_to_outdir() {
   local t="$1"
   case "$t" in
-    eol/centos-7-x86_64)    echo "RHEL/el7/x86_64" ;;
-    eol/centos-7-aarch64)   echo "RHEL/el7/aarch64" ;;
-    almalinux-8-x86_64)     echo "RHEL/el8/x86_64" ;;
-    almalinux-8-aarch64)    echo "RHEL/el8/aarch64" ;;
-    almalinux-9-x86_64)     echo "RHEL/el9/x86_64" ;;
-    almalinux-9-aarch64)    echo "RHEL/el9/aarch64" ;;
-    almalinux-10-x86_64)    echo "RHEL/el10/x86_64" ;;
-    almalinux-10-aarch64)   echo "RHEL/el10/aarch64" ;;
+    eol/centos-7-x86_64)    echo "EL/el7/x86_64" ;;
+    eol/centos-7-aarch64)   echo "EL/el7/aarch64" ;;
+    almalinux-8-x86_64)     echo "EL/el8/x86_64" ;;
+    almalinux-8-aarch64)    echo "EL/el8/aarch64" ;;
+    almalinux-9-x86_64)     echo "EL/el9/x86_64" ;;
+    almalinux-9-aarch64)    echo "EL/el9/aarch64" ;;
+    almalinux-10-x86_64)    echo "EL/el10/x86_64" ;;
+    almalinux-10-aarch64)   echo "EL/el10/aarch64" ;;
     fedora-*-x86_64)
       local v="${t#fedora-}"; v="${v%-x86_64}"
       echo "Fedora/fc${v}/x86_64" ;;
