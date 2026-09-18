@@ -203,7 +203,7 @@ make-repo
 make-repo --dry-run
 
 # Override the distro/version/arch being published
-make-repo --name el --version 9 --arch x86_64
+make-repo --name el --ver 9 --arch x86_64
 
 # Skip remote sync
 make-repo --skip-ftp --skip-sourceforge

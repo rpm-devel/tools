@@ -105,11 +105,11 @@
 2. `create-container.sh --enter almalinux 10 amd64` — enter it
 3. `rpmbuild.sh` or `rpmbuild.sh nginx` — build packages
 4. `exit` — leave container
-5. `make-repo --version 10` — sign, createrepo, sync
+5. `make-repo --ver 10` — sign, createrepo, sync
 
 ### Mirror Sync
 1. `create-mirror --version 10` — download upstream, re-sign, createrepo
-2. `make-repo --version 10` — sync to SourceForge
+2. `make-repo --ver 10` — sync to SourceForge
 
 ### Intra-org build dependencies (casjay-local repo)
 Some specs `BuildRequires` a package this org builds itself rather than one

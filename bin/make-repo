@@ -72,7 +72,7 @@ SKIP_SOURCEFORGE="false"
 DRY_RUN="false"
 
 SHORTOPTS="a:,n:,v:"
-LONGOPTS="version,ver:,arch:,name:,dry-run,skip-ftp,skip-sourceforge,help"
+LONGOPTS="version,ver:,arch:,name:,dry-run,skip-ftp,skip-sourceforge,debug,help"
 setopts=$(getopt -o "$SHORTOPTS" --long "$LONGOPTS" -n "$APPNAME" -- "$@" 2>/dev/null)
 eval set -- "${setopts[@]}" 2>/dev/null
 while :; do
@@ -94,6 +94,10 @@ while :; do
     ;;
   --dry-run)
     DRY_RUN="true"
+    shift 1
+    ;;
+  --debug)
+    set -x
     shift 1
     ;;
   --skip-ftp)
