@@ -3,10 +3,9 @@
 #   source /path/to/_create-container_completions.bash
 
 __create_container_completion() {
-  local cur prev words cword
-  cur="${COMP_WORDS[cword]}"
-  prev="${COMP_WORDS[cword-1]}"
-  words=("${COMP_WORDS[@]}")
+  local cur prev
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
 
   local longopts="debug help version config update enter color no-color image platform"
   local commands="pull all update enter list remove 7 8 9 10 fedora fedora-rawhide"

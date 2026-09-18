@@ -64,11 +64,12 @@ Usage: ${APPNAME} [OPTIONS]
 Bootstrap an RPM development container.
 
 Options:
-  -h, --help      Show this help message and exit
-  -v, --version   Show version and exit
-  --no-skel       Skip copying /etc/skel files
-  --no-macros     Skip downloading .rpmmacros
-  --packages FILE Read additional package names from FILE (one per line)
+  -h, --help        Show this help message and exit
+  -v, --version     Show version and exit
+  --no-skel         Skip copying /etc/skel files
+  --no-macros       Skip downloading .rpmmacros
+  --force-macros    Force download and overwrite .rpmmacros
+  --packages FILE   Read additional package names from FILE (one per line)
 
 EOF
   exit 0

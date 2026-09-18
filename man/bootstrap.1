@@ -1,0 +1,95 @@
+.TH "BOOTSTRAP" "1" "2026-09-18" "bootstrap 202604240000-git" "User Commands"
+.SH NAME
+bootstrap \- Bootstrap an RPM development container
+.SH SYNOPSIS
+.B bootstrap
+[\fIOPTIONS\fR]
+.SH DESCRIPTION
+.B bootstrap
+sets up an RPM development environment by installing required packages,
+configuring the rpmbuild directory tree, copying /etc/skel files, and
+downloading the .rpmmacros configuration file. It detects the system
+package manager and installs the appropriate build tools for RPM or Debian-based systems.
+.SH OPTIONS
+.TP
+.B -h, --help
+Show help message and exit.
+.TP
+.B -v, --version
+Show script version and exit.
+.TP
+.B --no-skel
+Skip copying /etc/skel files to /root.
+.TP
+.B --no-macros
+Skip downloading .rpmmacros file.
+.TP
+.B --force-macros
+Force download and overwrite .rpmmacros file even if it already exists.
+.TP
+.B --packages FILE
+Read additional package names from FILE (one package per line).
+Comments starting with # and empty lines are ignored.
+.SH ENVIRONMENT
+.TP
+.B NO_COLOR
+When set to any value, disables all colored output.
+.TP
+.B SHOW_RAW
+When set to
+.BR true ,
+disables all colored output.
+.SH REQUIREMENTS
+.B bootstrap
+must be run as root (uid 0).
+The system must have one of the following package managers installed:
+.BR dnf (1),
+.BR yum (1),
+or
+.BR apt-get (1).
+.SH FILES
+.TP
+.B ~/.rpmmacros
+RPM macro configuration file downloaded during bootstrap.
+.TP
+.B ~/.local/tmp/BUILD
+RPM build directory (created if missing).
+.TP
+.B ~/.local/tmp/BUILDROOT
+RPM buildroot directory (created if missing).
+.TP
+.B ~/rpmbuild
+RPM root directory using flat per-package layout (created if missing).
+.TP
+.B /tmp/bootstrap.pid
+Process ID file created during execution (cleaned up on exit).
+.SH EXAMPLES
+.TP
+Bootstrap with all defaults:
+.B bootstrap
+.TP
+Bootstrap but skip skel copy:
+.B bootstrap --no-skel
+.TP
+Bootstrap and install additional packages from a file:
+.B bootstrap --packages /path/to/packages.txt
+.TP
+Bootstrap, skip macros download but force-download later:
+.B bootstrap --no-macros
+.br
+.B bootstrap --force-macros
+.SH NOTES
+.B bootstrap
+uses a flat rpmbuild layout where each package gets its own directory
+(~/rpmbuild/{name}/{name}.spec + sources), not the traditional rpmdev-setuptree
+structure with BUILD/BUILDROOT/RPMS/SOURCES/SPECS/SRPMS subdirectories.
+.SH AUTHOR
+Jason Hempstead <jason@casjaysdev.pro>
+.SH LICENSE
+See LICENSE.md in the project repository.
+.SH SEE ALSO
+.BR rpmbuild (1),
+.BR rpmdev-setuptree (1),
+.BR dnf (1),
+.BR yum (1),
+.BR apt-get (1)

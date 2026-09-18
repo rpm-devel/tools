@@ -3,10 +3,9 @@
 #   source /path/to/_rpmbuild_completions.bash
 
 __rpmbuild_completion() {
-  local cur prev words cword
-  cur="${COMP_WORDS[cword]}"
-  prev="${COMP_WORDS[cword-1]}"
-  words=("${COMP_WORDS[@]}")
+  local cur prev
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
 
   local longopts="help version debug update list-targets no-sign platform target color no-color"
 
