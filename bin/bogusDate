@@ -47,18 +47,17 @@ while [[ $# -gt 0 ]]; do
         '- Eliminated rpmbuild "bogus date" warnings due to inconsistent weekday,' \
         "  by assuming the date is correct and changing the weekday." \
         >"$changelog"
-    cat "$1" |
-        grep "^\* $Www $Mmm $DD $YYYY" | grep -v '^echo' |
+    grep -- "^\* $Www $Mmm $DD $YYYY" "$1" | grep -v -- '^echo' |
         sed 's/^\* '"$WwwMmmDDYYYY"'.*$/echo "$(date --date="\2 \3 \4" +"%a \1 %b %d %Y")"/' |
-        grep '^echo' | bash |
-        grep -Ev "Mon Mon|Tue Tue|Wed Wed|Thu Thu|Fri Fri|Sat Sat|Sun Sun" |
+        grep -- '^echo' | bash |
+        grep -Ev -- "Mon Mon|Tue Tue|Wed Wed|Thu Thu|Fri Fri|Sat Sat|Sun Sun" |
         sort -u --key=5,5n --key=3,3M --key=4,4n |
         while read correct wrong Month Day Year; do
             date="$Month $Day $Year"
             alternatives="$wrong $Month $Day $Year --> "$(
                 for ((i = -6; i < 7; i++)); do
                     date --date "$date $i day" +"%a %b %d %Y or "
-                done | grep -E "$date|$wrong" | tr -d \\n
+                done | grep -E -- "$date|$wrong" | tr -d \\n
                 printf "%s" "...."
             )
             printf "  %s\n" "$alternatives" >>"$changelog"
@@ -69,7 +68,7 @@ while [[ $# -gt 0 ]]; do
     printf "\n" >>"$changelog"
     backup="$1"-$(date --utc --ref="$1" +"%Y-%m-%d-%H-%M-%S-%NZ")
     cp -vpf "$1" "$backup"
-    cat "$backup" | sed -f "$sedscript" -e '/^%changelog *$/ r '"$changelog" >"$1"
+    sed -f "$sedscript" -e '/^%changelog *$/ r '"$changelog" "$backup" >"$1"
     rm -f "$changelog" "$sedscript"
     diff -u "$backup" "$1"
     shift

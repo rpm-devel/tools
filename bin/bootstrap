@@ -29,7 +29,7 @@ BOOTSTRAP_CWD="$(realpath "${PWD}")"
 BOOTSTRAP_EXIT_STATUS=0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Color definitions (tput with fallback)
-if [ -t 1 ] && [ "${SHOW_RAW:-false}" != "true" ]; then
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${SHOW_RAW:-false}" != "true" ]; then
   C_RED="$(tput setaf 1 2>/dev/null || true)"
   C_GRN="$(tput setaf 2 2>/dev/null || true)"
   C_YLW="$(tput setaf 3 2>/dev/null || true)"
@@ -42,11 +42,11 @@ else
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Logging helpers
-info()    { printf '%s[INFO]%s  %s\n'  "${C_BLU}" "${C_RST}" "$*"; }
-ok()      { printf '%s[OK]%s    %s\n'  "${C_GRN}" "${C_RST}" "$*"; }
-warn()    { printf '%s[WARN]%s  %s\n'  "${C_YLW}" "${C_RST}" "$*" >&2; }
-error()   { printf '%s[ERROR]%s %s\n'  "${C_RED}" "${C_RST}" "$*" >&2; }
-die()     { error "$*"; exit 1; }
+__info()    { printf '%s[INFO]%s  %s\n'  "${C_BLU}" "${C_RST}" "$*"; }
+__ok()      { printf '%s[OK]%s    %s\n'  "${C_GRN}" "${C_RST}" "$*"; }
+__warn()    { printf '%s[WARN]%s  %s\n'  "${C_YLW}" "${C_RST}" "$*" >&2; }
+__error()   { printf '%s[ERROR]%s %s\n'  "${C_RED}" "${C_RST}" "$*" >&2; }
+__die()     { __error "$*"; exit 1; }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Variables
 URL_RPM_MACROS="https://github.com/rpm-devel/tools/raw/main/.rpmmacros"
@@ -86,9 +86,9 @@ __detect_pkg_mgr() {
     PKG_MGR="apt-get"
     PKG_TYPE="deb"
   else
-    die "No supported package manager found (dnf, yum, apt-get)"
+    __die "No supported package manager found (dnf, yum, apt-get)"
   fi
-  ok "Package manager: ${PKG_MGR} (${PKG_TYPE})"
+  __ok "Package manager: ${PKG_MGR} (${PKG_TYPE})"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Return the distro-appropriate package name for RPM build tools
@@ -103,7 +103,7 @@ __rpm_build_packages() {
   if [ "${PKG_TYPE}" = "deb" ]; then
     # Debian/Ubuntu equivalents (best-effort)
     echo "rpm rpmlint devscripts"
-    return
+    return 0
   fi
 
   # RPM-based
@@ -120,13 +120,13 @@ __rpm_build_packages() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Run a package manager update
 __pkg_update() {
-  info "Updating package index..."
+  __info "Updating package index..."
   case "${PKG_MGR}" in
     dnf|yum)
-      "${PKG_MGR}" makecache -q || warn "Package cache update failed (continuing)"
+      "${PKG_MGR}" makecache -q || __warn "Package cache update failed (continuing)"
       ;;
     apt-get)
-      "${PKG_MGR}" update -qq || warn "apt-get update failed (continuing)"
+      "${PKG_MGR}" update -qq || __warn "apt-get update failed (continuing)"
       ;;
   esac
 }
@@ -136,44 +136,44 @@ __pkg_install() {
   local pkgs="$*"
   [ -z "${pkgs}" ] && return 0
 
-  info "Installing packages: ${pkgs}"
+  __info "Installing packages: ${pkgs}"
   case "${PKG_MGR}" in
     dnf|yum)
       "${PKG_MGR}" install -y -q ${pkgs} || {
-        error "Package install failed for: ${pkgs}"
+        __error "Package install failed for: ${pkgs}"
         BOOTSTRAP_EXIT_STATUS=1
         return 1
       }
       ;;
     apt-get)
       DEBIAN_FRONTEND=noninteractive "${PKG_MGR}" install -y -qq ${pkgs} || {
-        error "Package install failed for: ${pkgs}"
+        __error "Package install failed for: ${pkgs}"
         BOOTSTRAP_EXIT_STATUS=1
         return 1
       }
       ;;
   esac
-  ok "Packages installed."
+  __ok "Packages installed."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Install packages from a file (one package per line, # comments allowed)
 __pkg_install_file() {
   local file="$1"
-  [ -f "${file}" ] || { warn "Package list file not found: ${file}"; return 0; }
+  [ -f "${file}" ] || { __warn "Package list file not found: ${file}"; return 0; }
 
   local pkgs
-  pkgs="$(grep -v '^\s*#' "${file}" | grep -v '^\s*$' | tr '\n' ' ')"
-  [ -z "${pkgs}" ] && { info "Package file ${file} is empty, skipping."; return 0; }
+  pkgs="$(grep -v -- '^\s*#' "${file}" | grep -v -- '^\s*$' | tr '\n' ' ')"
+  [ -z "${pkgs}" ] && { __info "Package file ${file} is empty, skipping."; return 0; }
 
-  info "Installing packages from ${file}..."
+  __info "Installing packages from ${file}..."
   __pkg_install ${pkgs}
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Copy /etc/skel files to /root, skipping any that already exist
 __copy_skel() {
-  [ -d /etc/skel ] || { warn "/etc/skel not found, skipping skel copy."; return 0; }
+  [ -d /etc/skel ] || { __warn "/etc/skel not found, skipping skel copy."; return 0; }
 
-  info "Copying /etc/skel files to /root (skipping existing files)..."
+  __info "Copying /etc/skel files to /root (skipping existing files)..."
   local copied=0
   local skipped=0
   while IFS= read -r -d '' src; do
@@ -190,7 +190,7 @@ __copy_skel() {
     fi
   done < <(find /etc/skel -mindepth 1 -maxdepth 3 -not -type d -print0 2>/dev/null)
 
-  ok "Skel copy: ${copied} copied, ${skipped} already existed (skipped)."
+  __ok "Skel copy: ${copied} copied, ${skipped} already existed (skipped)."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Download .rpmmacros to $HOME if not already present, or if --force-macros
@@ -203,22 +203,22 @@ __setup_rpmmacros() {
   elif command -v wget >/dev/null 2>&1; then
     downloader="wget -qO-"
   else
-    warn "Neither curl nor wget found; cannot download .rpmmacros"
+    __warn "Neither curl nor wget found; cannot download .rpmmacros"
     return 1
   fi
 
   if [ -f "${dest}" ] && [ "${FORCE_MACROS:-false}" != "true" ]; then
-    info "${dest} already exists; skipping download (use --force-macros to overwrite)."
+    __info "${dest} already exists; skipping download (use --force-macros to overwrite)."
     return 0
   fi
 
-  info "Downloading .rpmmacros from ${URL_RPM_MACROS}..."
+  __info "Downloading .rpmmacros from ${URL_RPM_MACROS}..."
   if ${downloader} "${URL_RPM_MACROS}" >"${dest}.tmp"; then
     mv "${dest}.tmp" "${dest}"
-    ok ".rpmmacros installed at ${dest}"
+    __ok ".rpmmacros installed at ${dest}"
   else
     rm -f "${dest}.tmp"
-    warn "Failed to download .rpmmacros (non-fatal)."
+    __warn "Failed to download .rpmmacros (non-fatal)."
     return 1
   fi
 }
@@ -233,7 +233,7 @@ __setup_rpmmacros() {
 __setup_rpmbuild_tree() {
   mkdir -p "${HOME}/rpmbuild"
   mkdir -p "${HOME}/.local/tmp/BUILD" "${HOME}/.local/tmp/BUILDROOT"
-  ok "rpmbuild directory tree ready (flat layout, no SPECS/SOURCES/RPMS subdirs)."
+  __ok "rpmbuild directory tree ready (flat layout, no SPECS/SOURCES/RPMS subdirs)."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Parse arguments
@@ -251,24 +251,24 @@ while [ $# -gt 0 ]; do
     --force-macros) FORCE_MACROS=true ;;
     --packages)
       shift
-      [ -z "${1:-}" ] && die "--packages requires a file path argument"
+      [ -z "${1:-}" ] && __die "--packages requires a file path argument"
       OPT_PKG_FILE="$1"
       ;;
-    *) warn "Unknown option: $1"; __usage ;;
+    *) __warn "Unknown option: $1"; __usage ;;
   esac
   shift
 done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Enforce root
 if [ "${SET_UID}" -ne 0 ]; then
-  die "This script must be run as root (current user: ${RUN_USER})"
+  __die "This script must be run as root (current user: ${RUN_USER})"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Write PID file
 echo "$$" >"/tmp/bootstrap.pid"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main
-info "Starting ${APPNAME} ${VERSION}"
+__info "Starting ${APPNAME} ${VERSION}"
 
 __detect_pkg_mgr
 __pkg_update
@@ -286,9 +286,9 @@ __setup_rpmbuild_tree
 rm -f "/tmp/bootstrap.pid"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if [ "${BOOTSTRAP_EXIT_STATUS}" -eq 0 ]; then
-  ok "Bootstrap complete."
+  __ok "Bootstrap complete."
 else
-  error "Bootstrap finished with errors (exit status: ${BOOTSTRAP_EXIT_STATUS})."
+  __error "Bootstrap finished with errors (exit status: ${BOOTSTRAP_EXIT_STATUS})."
 fi
 
 exit "${BOOTSTRAP_EXIT_STATUS}"
